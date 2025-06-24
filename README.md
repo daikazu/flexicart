@@ -70,8 +70,8 @@ A flexible shopping cart package for Laravel with support for session or databas
 
 ### Requirements
 
-- PHP 8.1 or higher
-- Laravel 9.0 or higher
+- PHP 8.3 or higher
+- Laravel 11.0 or higher
 - Brick/Money package (automatically installed)
 
 ### Install the Package
