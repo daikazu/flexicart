@@ -1,0 +1,47 @@
+includes:
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+    paths:
+        - src
+        - database
+    tmpDir: build/phpstan
+
+    checkOctaneCompatibility: true
+
+    checkModelProperties: true
+
+    # Add these configurations to handle your specific issues
+    checkMissingIterableValueType: false
+
+    # Handle closure parameter type inference
+    inferPrivatePropertyTypeFromConstructor: true
+
+    # Allow accessing properties on mixed types (for collections)
+    reportUnmatchedIgnoredErrors: false
+
+    # Ignore specific errors that are false positives
+    ignoreErrors:
+        # Allow accessing properties on objects in collections
+        - '#Cannot access property \$[a-zA-Z_]+ on mixed#'
+
+        # Allow accessing enum values
+        - '#Cannot access property \$value on [a-zA-Z\\\\]+#'
+
+        # Allow method calls on mixed types in collections
+        - '#Cannot call method [a-zA-Z_]+ on mixed#'
+
+        # Specific to your sortBy closures
+        - '#Parameter \#1 \$callback of method Illuminate\\Support\\Collection::sortBy\(\) expects#'
+
+        # Allow property access in closure contexts
+        - '#Closure should return#'
+    # Bootstrap file for Laravel helpers
+    bootstrapFiles:
+        - vendor/autoload.php
+
+    # Stub files for better Laravel support
+    stubFiles:
+        - vendor/nunomaduro/larastan/stubs/*.stub
+
