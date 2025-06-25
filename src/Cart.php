@@ -218,6 +218,18 @@ final class Cart implements CartInterface
     }
 
     /**
+     * Clear all items from the cart.
+     */
+    public function reset(): self
+    {
+        $this->items = collect();
+        $this->conditions = collect();
+        $this->persist();
+
+        return $this;
+    }
+
+    /**
      * Get a specific item from the cart.
      */
     public function item(int|string $itemId): ?CartItem
