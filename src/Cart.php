@@ -25,14 +25,14 @@ final class Cart implements CartInterface
      *
      * @var Collection<string, CartItem>
      */
-    private Collection $items;
+    public Collection $items;
 
     /**
      * The global cart conditions (applied to subtotal).
      *
      * @var Collection<string, ConditionInterface>
      */
-    private Collection $conditions;
+    public Collection $conditions;
 
     /**
      * Create a new cart instance.
@@ -231,6 +231,14 @@ final class Cart implements CartInterface
     public function items(): Collection
     {
         return $this->items;
+    }
+
+    /**
+     * Get all conditions from the cart.
+     */
+    public function conditions(): Collection
+    {
+        return $this->conditions;
     }
 
     /**
