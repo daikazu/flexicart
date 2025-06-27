@@ -271,7 +271,7 @@ describe('Conditions', function (): void {
 
     describe('FixedTaxCondition', function (): void {
 
-        test('can be instantiated with required parameters', function (): void {
+        test(' FixedTaxCondition can be instantiated with required parameters', function (): void {
             $condition = new FixedTaxCondition('Test Tax', 5.00);
 
             expect($condition->name)->toBe('Test Tax')
@@ -283,7 +283,7 @@ describe('Conditions', function (): void {
         });
 
         describe('calculate method', function (): void {
-            test('returns fixed price value', function (): void {
+            test('returns fixed tax value', function (): void {
                 $condition = new FixedTaxCondition('Test Tax', 8.50);
                 $result = $condition->calculate();
 
@@ -302,7 +302,7 @@ describe('Conditions', function (): void {
     });
 
     describe('PercentageCondition', function (): void {
-        test('can be instantiated with required parameters', function (): void {
+        test('PercentageCondition can be instantiated with required parameters', function (): void {
             $condition = new PercentageCondition('Test Discount', 10.0);
 
             expect($condition->name)->toBe('Test Discount')
@@ -337,7 +337,7 @@ describe('Conditions', function (): void {
                 expect($result->formatted())->toBe('$33.33');
             });
 
-            test('throws exception when price is null', function (): void {
+            test('throws exception when price is null for PercentageCondition', function (): void {
                 $condition = new PercentageCondition('Test Discount', 10.0);
 
                 expect(fn () => $condition->calculate())
@@ -395,27 +395,26 @@ describe('Conditions', function (): void {
     });
 
     describe('PercentageTaxCondition', function (): void {
-        describe('Constructor', function (): void {
-            test('can be instantiated with required parameters', function (): void {
-                $condition = new PercentageTaxCondition('Test Tax', 8.25);
 
-                expect($condition->name)->toBe('Test Tax')
-                    ->and($condition->value)->toBe(8.25)
-                    ->and($condition->type)->toBe(ConditionType::PERCENTAGE)
-                    ->and($condition->target)->toBe(ConditionTarget::TAXABLE);
-            });
+        test('PercentageTaxCondition can be instantiated with required parameters', function (): void {
+            $condition = new PercentageTaxCondition('Test Tax', 8.25);
 
-            test('has default target of TAXABLE', function (): void {
-                $condition = new PercentageTaxCondition('Test Tax', 8.25);
+            expect($condition->name)->toBe('Test Tax')
+                ->and($condition->value)->toBe(8.25)
+                ->and($condition->type)->toBe(ConditionType::PERCENTAGE)
+                ->and($condition->target)->toBe(ConditionTarget::TAXABLE);
+        });
 
-                expect($condition->target)->toBe(ConditionTarget::TAXABLE);
-            });
+        test('has default target of TAXABLE', function (): void {
+            $condition = new PercentageTaxCondition('Test Tax', 8.25);
 
-            test('ignores constructor target parameter due to class default', function (): void {
-                $condition = new PercentageTaxCondition('Test Tax', 8.25, ConditionTarget::ITEM);
+            expect($condition->target)->toBe(ConditionTarget::TAXABLE);
+        });
 
-                expect($condition->target)->toBe(ConditionTarget::TAXABLE);
-            });
+        test('ignores constructor target parameter due to class default', function (): void {
+            $condition = new PercentageTaxCondition('Test Tax', 8.25, ConditionTarget::ITEM);
+
+            expect($condition->target)->toBe(ConditionTarget::TAXABLE);
         });
 
         describe('Static make method', function (): void {
@@ -431,7 +430,7 @@ describe('Conditions', function (): void {
         });
 
         describe('calculate method', function (): void {
-            test('calculates percentage of given price', function (): void {
+            test('calculates tax percentage of given price', function (): void {
                 $condition = new PercentageTaxCondition('Test Tax', 8.25);
                 $price = new Price(100.00);
                 $result = $condition->calculate($price);
@@ -440,7 +439,7 @@ describe('Conditions', function (): void {
                     ->and($result->formatted())->toBe('$8.25');
             });
 
-            test('throws exception when price is null', function (): void {
+            test('throws exception when price is null for PercentageTaxCondition', function (): void {
                 $condition = new PercentageTaxCondition('Test Tax', 8.25);
 
                 expect(fn () => $condition->calculate())

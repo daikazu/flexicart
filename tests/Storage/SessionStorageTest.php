@@ -259,7 +259,7 @@ describe('SessionStorage', function (): void {
             expect($result)->toBe($newFormatData);
         });
 
-        test('uses custom session key when provided', function (): void {
+        test('uses custom session key when putting data', function (): void {
             // Prepare test data
             $testData = [
                 'items'      => ['item1', 'item2'],
@@ -300,7 +300,7 @@ describe('SessionStorage', function (): void {
             $sessionStorage->flush();
         });
 
-        test('uses custom session key when provided', function (): void {
+        test('uses custom session key when flushing data', function (): void {
             // Custom session key
             $customKey = 'custom_cart_key';
 

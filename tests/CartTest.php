@@ -548,7 +548,7 @@ describe('Cart', function (): void {
                     ->and($conditions->first())->toBe($condition);
             });
 
-            test('can add multiple conditions', function (): void {
+            test('can add multiple global conditions', function (): void {
                 $condition1 = new FixedCondition('Discount 1', -5.00);
                 $condition2 = new PercentageCondition('Discount 2', -10);
 
@@ -559,7 +559,7 @@ describe('Cart', function (): void {
                     ->and($conditions)->toHaveCount(2);
             });
 
-            test('overwrites condition with same name', function (): void {
+            test('overwrites global condition with same name', function (): void {
                 $condition1 = new FixedCondition('Discount', -5.00);
                 $condition2 = new FixedCondition('Discount', -10.00);
 
@@ -571,7 +571,7 @@ describe('Cart', function (): void {
                     ->and($conditions->first())->toBe($condition2);
             });
 
-            test('can remove condition by name', function (): void {
+            test('can remove global condition by name', function (): void {
                 $condition = new FixedCondition('Discount', -10.00);
                 $this->cart->addCondition($condition);
 
@@ -582,7 +582,7 @@ describe('Cart', function (): void {
                     ->and($conditions)->toHaveCount(0);
             });
 
-            test('can clear all conditions', function (): void {
+            test('can clear all global conditions', function (): void {
                 $condition1 = new FixedCondition('Discount 1', -5.00);
                 $condition2 = new PercentageCondition('Discount 2', -10);
 
@@ -682,7 +682,7 @@ describe('Cart', function (): void {
             expect($this->cart->total()->toFloat())->toBe(0.00);
         });
 
-        test('handles very large quantities', function (): void {
+        test('handles very large quantities at cart level', function (): void {
             $this->cart->addItem([
                 'id'       => 'product1',
                 'name'     => 'Product 1',

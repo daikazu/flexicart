@@ -18,7 +18,7 @@ describe('CartItem', function (): void {
     });
 
     describe('Constructor', function (): void {
-        test('can be instantiated with required parameters', function (): void {
+        test('CartItem can be instantiated with required parameters', function (): void {
             $item = new CartItem([
                 'id'    => 1,
                 'name'  => 'Test Product',
@@ -36,7 +36,7 @@ describe('CartItem', function (): void {
                 ->and($item->conditions)->toHaveCount(0);
         });
 
-        test('can be instantiated with all parameters', function (): void {
+        test('CartItem can be instantiated with all parameters', function (): void {
             $price = new Price(25.50);
             $attributes = ['color' => 'red', 'size' => 'large'];
             $condition = new FixedCondition('Discount', 5.00);
@@ -61,7 +61,7 @@ describe('CartItem', function (): void {
                 ->and($item->conditions->first())->toBe($condition);
         });
 
-        test('can be instantiated with Fluent attributes', function (): void {
+        test('CartItem can be instantiated with Fluent attributes', function (): void {
             $attributes = new Fluent(['color' => 'blue']);
 
             $item = new CartItem([
@@ -145,7 +145,7 @@ describe('CartItem', function (): void {
     });
 
     describe('Static make method', function (): void {
-        test('can create instance with required parameters', function (): void {
+        test('can create CartItem instance with required parameters', function (): void {
             $item = CartItem::make([
                 'id'    => 1,
                 'name'  => 'Test Product',
@@ -256,7 +256,7 @@ describe('CartItem', function (): void {
                     ->and($item->conditions->first()->value)->toBe(3.00);
             });
 
-            test('overwrites condition with same name', function (): void {
+            test('overwrites item condition with same name', function (): void {
                 $item = new CartItem([
                     'id'    => 1,
                     'name'  => 'Test Product',
@@ -292,7 +292,7 @@ describe('CartItem', function (): void {
         });
 
         describe('addConditions', function (): void {
-            test('can add multiple conditions', function (): void {
+            test('can add multiple item conditions', function (): void {
                 $item = new CartItem([
                     'id'    => 1,
                     'name'  => 'Test Product',
@@ -328,7 +328,7 @@ describe('CartItem', function (): void {
         });
 
         describe('removeCondition', function (): void {
-            test('can remove condition by name', function (): void {
+            test('can remove item condition by name', function (): void {
                 $item = new CartItem([
                     'id'    => 1,
                     'name'  => 'Test Product',
@@ -383,7 +383,7 @@ describe('CartItem', function (): void {
         });
 
         describe('clearConditions', function (): void {
-            test('can clear all conditions', function (): void {
+            test('can clear all item conditions', function (): void {
                 $item = new CartItem([
                     'id'    => 1,
                     'name'  => 'Test Product',
@@ -428,7 +428,7 @@ describe('CartItem', function (): void {
         });
 
         describe('unadjustedSubtotal', function (): void {
-            test('calculates subtotal without conditions', function (): void {
+            test('calculates unadjusted subtotal without conditions', function (): void {
                 $item = new CartItem([
                     'id'       => 1,
                     'name'     => 'Test Product',
@@ -455,7 +455,7 @@ describe('CartItem', function (): void {
         });
 
         describe('subtotal', function (): void {
-            test('calculates subtotal without conditions', function (): void {
+            test('calculates adjusted subtotal without conditions', function (): void {
                 $item = new CartItem([
                     'id'       => 1,
                     'name'     => 'Test Product',
@@ -645,7 +645,7 @@ describe('CartItem', function (): void {
     });
 
     describe('Edge Cases', function (): void {
-        test('handles very large quantities', function (): void {
+        test('handles very large quantities at item level', function (): void {
             $item = new CartItem([
                 'id'       => 1,
                 'name'     => 'Test Product',
