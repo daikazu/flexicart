@@ -6,7 +6,15 @@ namespace Daikazu\Flexicart\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
+/**
+ * @property int|null $user_id
+ * @property string|null $session_id
+ * @property Collection $conditions
+ * @property string $created_at
+ * @property string $updated_at
+ */
 final class CartModel extends Model
 {
     protected $table = 'carts';

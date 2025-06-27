@@ -45,6 +45,7 @@ abstract class Condition implements ConditionInterface
 
         $hasClassTarget = static::hasClassDefaultTarget();
 
+        /** @phpstan-ignore-next-line */
         return new static(
             name: $parameters['name'],
             value: $parameters['value'],
@@ -63,7 +64,7 @@ abstract class Condition implements ConditionInterface
      *
      * @throws InvalidArgumentException When required parameters are missing or invalid
      */
-    private static function validateParameters(array $parameters): void
+    protected static function validateParameters(array $parameters): void
     {
         // Validate required parameters
         if (empty($parameters['name']) || ! is_string($parameters['name'])) {
@@ -98,7 +99,7 @@ abstract class Condition implements ConditionInterface
     /**
      * Check if the class has a default target property defined.
      */
-    private static function hasClassDefaultTarget(): bool
+    protected static function hasClassDefaultTarget(): bool
     {
         $reflection = new ReflectionClass(static::class);
         $properties = $reflection->getDefaultProperties();

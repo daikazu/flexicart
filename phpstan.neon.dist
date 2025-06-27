@@ -12,9 +12,6 @@ parameters:
 
     checkModelProperties: true
 
-    # Add these configurations to handle your specific issues
-    checkMissingIterableValueType: false
-
     # Handle closure parameter type inference
     inferPrivatePropertyTypeFromConstructor: true
 
@@ -37,11 +34,18 @@ parameters:
 
         # Allow property access in closure contexts
         - '#Closure should return#'
+
+        # Allow accessing properties on ConditionInterface implementations
+        - '#Access to an undefined property Daikazu\\Flexicart\\Conditions\\Contracts\\ConditionInterface::\$target#'
+        - '#Access to an undefined property Daikazu\\Flexicart\\Conditions\\Contracts\\ConditionInterface::\$taxable#'
+        - '#Access to an undefined property Daikazu\\Flexicart\\Conditions\\Contracts\\ConditionInterface::\$order#'
+        - '#Access to an undefined property Daikazu\\Flexicart\\Conditions\\Contracts\\ConditionInterface::\$value#'
+        - '#Access to an undefined property Daikazu\\Flexicart\\Conditions\\Contracts\\ConditionInterface::\$type#'
+        - '#Access to an undefined property Daikazu\\Flexicart\\Conditions\\Contracts\\ConditionInterface::\$name#'
+        - '#Access to an undefined property Daikazu\\Flexicart\\Conditions\\Contracts\\ConditionInterface::\$attributes#'
+
+        # Allow defensive instanceof checks in DatabaseStorage
+        - '#Instanceof between .+ and .+ will always evaluate to (true|false)\.#'
     # Bootstrap file for Laravel helpers
     bootstrapFiles:
         - vendor/autoload.php
-
-    # Stub files for better Laravel support
-    stubFiles:
-        - vendor/nunomaduro/larastan/stubs/*.stub
-

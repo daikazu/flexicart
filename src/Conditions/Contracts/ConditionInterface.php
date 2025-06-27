@@ -4,9 +4,21 @@ declare(strict_types=1);
 
 namespace Daikazu\Flexicart\Conditions\Contracts;
 
+use Daikazu\Flexicart\Enums\ConditionTarget;
+use Daikazu\Flexicart\Enums\ConditionType;
 use Daikazu\Flexicart\Exceptions\PriceException;
 use Daikazu\Flexicart\Price;
+use Illuminate\Support\Fluent;
 
+/**
+ * @property ConditionType $type
+ * @property ConditionTarget $target
+ * @property string $name
+ * @property int|float $value
+ * @property array|Fluent $attributes
+ * @property int $order
+ * @property bool $taxable
+ */
 interface ConditionInterface
 {
     /**

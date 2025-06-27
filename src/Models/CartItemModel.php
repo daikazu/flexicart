@@ -7,6 +7,15 @@ namespace Daikazu\Flexicart\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $cart_id
+ * @property string $item_id
+ * @property string $name
+ * @property float $price
+ * @property int $quantity
+ * @property array $attributes
+ * @property array $conditions
+ */
 final class CartItemModel extends Model
 {
     protected $table = 'cart_items';
