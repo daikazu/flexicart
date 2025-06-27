@@ -20,57 +20,56 @@ describe('Conditions', function (): void {
     });
 
     describe('FixedCondition', function (): void {
-        describe('Constructor', function (): void {
-            test('can be instantiated with required parameters', function (): void {
-                $condition = new FixedCondition('Test Discount', 10.00);
 
-                expect($condition->name)->toBe('Test Discount')
-                    ->and($condition->value)->toBe(10.00)
-                    ->and($condition->type)->toBe(ConditionType::FIXED)
-                    ->and($condition->target)->toBe(ConditionTarget::SUBTOTAL)
-                    ->and($condition->order)->toBe(0)
-                    ->and($condition->taxable)->toBeFalse()
-                    ->and($condition->attributes)->toBeInstanceOf(Fluent::class);
-            });
+        test('can be instantiated with required parameters', function (): void {
+            $condition = new FixedCondition('Test Discount', 10.00);
 
-            test('can be instantiated with all parameters', function (): void {
-                $attributes = ['description' => 'Test description'];
-                $condition = new FixedCondition(
-                    name: 'Test Discount',
-                    value: 15.50,
-                    target: ConditionTarget::ITEM,
-                    attributes: $attributes,
-                    order: 5,
-                    taxable: true
-                );
+            expect($condition->name)->toBe('Test Discount')
+                ->and($condition->value)->toBe(10.00)
+                ->and($condition->type)->toBe(ConditionType::FIXED)
+                ->and($condition->target)->toBe(ConditionTarget::SUBTOTAL)
+                ->and($condition->order)->toBe(0)
+                ->and($condition->taxable)->toBeFalse()
+                ->and($condition->attributes)->toBeInstanceOf(Fluent::class);
+        });
 
-                expect($condition->name)->toBe('Test Discount')
-                    ->and($condition->value)->toBe(15.50)
-                    ->and($condition->type)->toBe(ConditionType::FIXED)
-                    ->and($condition->target)->toBe(ConditionTarget::ITEM)
-                    ->and($condition->order)->toBe(5)
-                    ->and($condition->taxable)->toBeTrue()
-                    ->and($condition->attributes->toArray())->toBe($attributes);
-            });
+        test('can be instantiated with all parameters', function (): void {
+            $attributes = ['description' => 'Test description'];
+            $condition = new FixedCondition(
+                name: 'Test Discount',
+                value: 15.50,
+                target: ConditionTarget::ITEM,
+                attributes: $attributes,
+                order: 5,
+                taxable: true
+            );
 
-            test('can be instantiated with Fluent attributes', function (): void {
-                $attributes = new Fluent(['description' => 'Test description']);
-                $condition = new FixedCondition('Test Discount', 10.00, attributes: $attributes);
+            expect($condition->name)->toBe('Test Discount')
+                ->and($condition->value)->toBe(15.50)
+                ->and($condition->type)->toBe(ConditionType::FIXED)
+                ->and($condition->target)->toBe(ConditionTarget::ITEM)
+                ->and($condition->order)->toBe(5)
+                ->and($condition->taxable)->toBeTrue()
+                ->and($condition->attributes->toArray())->toBe($attributes);
+        });
 
-                expect($condition->attributes)->toBe($attributes);
-            });
+        test('can be instantiated with Fluent attributes', function (): void {
+            $attributes = new Fluent(['description' => 'Test description']);
+            $condition = new FixedCondition('Test Discount', 10.00, attributes: $attributes);
 
-            test('can be instantiated with integer value', function (): void {
-                $condition = new FixedCondition('Test Discount', 10);
+            expect($condition->attributes)->toBe($attributes);
+        });
 
-                expect($condition->value)->toBe(10);
-            });
+        test('can be instantiated with integer value', function (): void {
+            $condition = new FixedCondition('Test Discount', 10);
 
-            test('can be instantiated with float value', function (): void {
-                $condition = new FixedCondition('Test Discount', 10.50);
+            expect($condition->value)->toBe(10);
+        });
 
-                expect($condition->value)->toBe(10.50);
-            });
+        test('can be instantiated with float value', function (): void {
+            $condition = new FixedCondition('Test Discount', 10.50);
+
+            expect($condition->value)->toBe(10.50);
         });
 
         describe('Static make method', function (): void {
@@ -271,17 +270,16 @@ describe('Conditions', function (): void {
     });
 
     describe('FixedTaxCondition', function (): void {
-        describe('Constructor', function (): void {
-            test('can be instantiated with required parameters', function (): void {
-                $condition = new FixedTaxCondition('Test Tax', 5.00);
 
-                expect($condition->name)->toBe('Test Tax')
-                    ->and($condition->value)->toBe(5.00)
-                    ->and($condition->type)->toBe(ConditionType::FIXED)
-                    ->and($condition->target)->toBe(ConditionTarget::SUBTOTAL)
-                    ->and($condition->order)->toBe(0)
-                    ->and($condition->taxable)->toBeFalse();
-            });
+        test('can be instantiated with required parameters', function (): void {
+            $condition = new FixedTaxCondition('Test Tax', 5.00);
+
+            expect($condition->name)->toBe('Test Tax')
+                ->and($condition->value)->toBe(5.00)
+                ->and($condition->type)->toBe(ConditionType::FIXED)
+                ->and($condition->target)->toBe(ConditionTarget::SUBTOTAL)
+                ->and($condition->order)->toBe(0)
+                ->and($condition->taxable)->toBeFalse();
         });
 
         describe('calculate method', function (): void {
@@ -304,15 +302,13 @@ describe('Conditions', function (): void {
     });
 
     describe('PercentageCondition', function (): void {
-        describe('Constructor', function (): void {
-            test('can be instantiated with required parameters', function (): void {
-                $condition = new PercentageCondition('Test Discount', 10.0);
+        test('can be instantiated with required parameters', function (): void {
+            $condition = new PercentageCondition('Test Discount', 10.0);
 
-                expect($condition->name)->toBe('Test Discount')
-                    ->and($condition->value)->toBe(10.0)
-                    ->and($condition->type)->toBe(ConditionType::PERCENTAGE)
-                    ->and($condition->target)->toBe(ConditionTarget::SUBTOTAL);
-            });
+            expect($condition->name)->toBe('Test Discount')
+                ->and($condition->value)->toBe(10.0)
+                ->and($condition->type)->toBe(ConditionType::PERCENTAGE)
+                ->and($condition->target)->toBe(ConditionTarget::SUBTOTAL);
         });
 
         describe('calculate method', function (): void {
