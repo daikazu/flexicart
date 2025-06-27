@@ -6,10 +6,14 @@
 </a>
 
 # FlexiCart
+[![PHP Version Require](https://img.shields.io/packagist/php-v/daikazu/flexicart?style=flat-square)](https://packagist.org/packages/daikazu/flexicart)
+[![Laravel Version](https://img.shields.io/badge/Laravel-11%2B-red?style=flat-square&logo=laravel)](https://laravel.com)
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/daikazu/flexicart.svg?style=flat-square)](https://packagist.org/packages/daikazu/flexicart)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/daikazu/flexicart/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/daikazu/flexicart/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/daikazu/flexicart/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/daikazu/flexicart/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
+[![PHPStan](https://img.shields.io/github/actions/workflow/status/daikazu/flexicart/phpstan.yml?branch=main&label=PHPStan&=flat-square)](https://github.com/daikazu/flexicart/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/daikazu/flexicart.svg?style=flat-square)](https://packagist.org/packages/daikazu/flexicart)
+[![GitHub forks](https://img.shields.io/github/forks/daikazu/flexicart?style=flat-square)](https://github.com/daikazu/flexicart/network)
+[![GitHub stars](https://img.shields.io/github/stars/daikazu/flexicart?style=flat-square)](https://github.com/daikazu/flexicart/stargazers)
 
 A flexible shopping cart package for Laravel with support for session or database storage, conditional pricing, and custom product attributes.
 
