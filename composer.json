@@ -4,7 +4,12 @@
     "keywords": [
         "Daikazu",
         "laravel",
-        "flexicart"
+        "flexicart",
+        "shopping-cart",
+        "cart",
+        "e-commerce",
+        "laravel-package",
+        "php"
     ],
     "homepage": "https://github.com/daikazu/flexicart",
     "license": "MIT",
@@ -15,6 +20,10 @@
             "role": "Developer"
         }
     ],
+    "support": {
+        "issues": "https://github.com/daikazu/flexicart/issues",
+        "source": "https://github.com/daikazu/flexicart"
+    },
     "require": {
         "php": "^8.3",
         "ext-bcmath": "*",
@@ -57,14 +66,22 @@
         "analyse": "vendor/bin/phpstan analyse",
         "test": "vendor/bin/pest",
         "test-coverage": "vendor/bin/pest --coverage",
-        "format": "vendor/bin/pint"
+        "format": "vendor/bin/pint",
+        "fix": "vendor/bin/pint",
+        "refactor": "vendor/bin/rector --dry-run",
+        "refactor-fix": "vendor/bin/rector",
+        "dust": "vendor/bin/duster lint",
+        "dust-fix": "vendor/bin/duster fix"
+
     },
     "config": {
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "phpstan/extension-installer": true
-        }
+        },
+        "preferred-install": "dist",
+        "optimize-autoloader": true
     },
     "extra": {
         "laravel": {
