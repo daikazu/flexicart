@@ -16,7 +16,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/daikazu/flexicart?style=flat-square)](https://github.com/daikazu/flexicart/stargazers)
 
 A flexible shopping cart package for Laravel with support for session or database storage, conditional pricing, and custom product attributes.
-
+ 
 ## Table of Contents
 
 - [Features](#features)
@@ -183,6 +183,10 @@ Cart::removeItem('item_id');
 
 // Clear all items from the cart
 Cart::clear();
+
+// clears all items and conditions from cart
+Cart::reset();
+
 ```
 
 ### Getting Cart Content and Calculations
@@ -392,6 +396,8 @@ $price = new Price($money);
 ```
 
 ### Price Operations
+
+Price operations return the modified Price object
 
 ```php
 $price1 = Price::from(10.00);
@@ -608,7 +614,6 @@ composer test
 **Price calculation errors**
 - Verify that all price values are numeric
 - Ensure currency codes are valid ISO codes
-- Check that the Brick/Money library is properly installed
 
 **Condition not applying correctly**
 - Verify condition targets are set appropriately
@@ -617,17 +622,9 @@ composer test
 
 **Memory issues with large carts**
 - Consider implementing cart item limits
+- Don't use session a storage as cookies due to limits to cookie size
 - Use database storage for better memory management
 - Implement cart cleanup for old/abandoned carts
-
-### Debug Mode
-
-Enable debug mode to get more detailed error messages:
-
-```php
-// In your AppServiceProvider or cart usage
-config(['app.debug' => true]);
-```
 
 ## Changelog
 
