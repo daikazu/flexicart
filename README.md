@@ -630,6 +630,13 @@ composer test
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
 
+## 🔮 Future Roadmap
+- Event system for cart actions
+- Built-in coupon code support
+- Advanced reporting and analytics
+- REST API endpoints
+
+
 ## Contributing
 
 Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
