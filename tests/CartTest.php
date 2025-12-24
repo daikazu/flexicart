@@ -9,6 +9,7 @@ use Daikazu\Flexicart\Conditions\Types\PercentageCondition;
 use Daikazu\Flexicart\Conditions\Types\PercentageTaxCondition;
 use Daikazu\Flexicart\Exceptions\CartException;
 use Daikazu\Flexicart\Price;
+use Daikazu\Flexicart\Tests\MockStorage;
 use Illuminate\Support\Collection;
 
 describe('Cart', function (): void {
