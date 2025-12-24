@@ -93,4 +93,18 @@ return [
         'lifetime' => 60 * 24 * 7, // 1 week by default
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cart Events
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, the cart will dispatch Laravel events for various actions
+    | such as adding items, removing items, clearing the cart, etc. This allows
+    | you to hook into cart actions for analytics, inventory management, etc.
+    |
+    */
+    'events' => [
+        'enabled' => env('CART_EVENTS_ENABLED', true),
+    ],
+
 ];

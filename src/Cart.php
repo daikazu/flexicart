@@ -14,6 +14,17 @@ use Daikazu\Flexicart\Contracts\CartInterface;
 use Daikazu\Flexicart\Contracts\StorageInterface;
 use Daikazu\Flexicart\Enums\ConditionTarget;
 use Daikazu\Flexicart\Enums\ConditionType;
+use Daikazu\Flexicart\Events\CartCleared;
+use Daikazu\Flexicart\Events\CartReset;
+use Daikazu\Flexicart\Events\ConditionAdded;
+use Daikazu\Flexicart\Events\ConditionRemoved;
+use Daikazu\Flexicart\Events\ConditionsCleared;
+use Daikazu\Flexicart\Events\ItemAdded;
+use Daikazu\Flexicart\Events\ItemConditionAdded;
+use Daikazu\Flexicart\Events\ItemConditionRemoved;
+use Daikazu\Flexicart\Events\ItemQuantityUpdated;
+use Daikazu\Flexicart\Events\ItemRemoved;
+use Daikazu\Flexicart\Events\ItemUpdated;
 use Daikazu\Flexicart\Exceptions\CartException;
 use Daikazu\Flexicart\Exceptions\PriceException;
 use Illuminate\Support\Collection;
@@ -120,11 +131,19 @@ final class Cart implements CartInterface
      */
     public function addItem(array | CartItem $item): self
     {
-
         if ($item instanceof CartItem) {
-            $this->items->put((string) $item->id, $item);
-        } else {
+            $existingItem = $this->items->get((string) $item->id);
+            $oldQuantity = $existingItem?->quantity;
 
+            $this->items->put((string) $item->id, $item);
+            $this->persist();
+
+            if ($oldQuantity !== null) {
+                $this->dispatchEvent(new ItemQuantityUpdated($this->id(), $item, $oldQuantity, $item->quantity));
+            } else {
+                $this->dispatchEvent(new ItemAdded($this->id(), $item));
+            }
+        } else {
             if (! isset($item['id'])) {
                 throw new CartException('Item ID is required');
             }
@@ -138,17 +157,23 @@ final class Cart implements CartInterface
             }
 
             $itemId = $item['id'];
+            $itemIdString = is_string($itemId) || is_int($itemId) ? (string) $itemId : '';
+
+            $existingItem = $this->items->get($itemIdString);
+            $oldQuantity = $existingItem?->quantity;
 
             $item = $this->updateExistingItem($item);
-
             $cartItem = CartItem::make($item);
 
-            $itemIdString = is_string($itemId) || is_int($itemId) ? (string) $itemId : '';
             $this->items->put($itemIdString, $cartItem);
+            $this->persist();
 
+            if ($oldQuantity !== null) {
+                $this->dispatchEvent(new ItemQuantityUpdated($this->id(), $cartItem, $oldQuantity, $cartItem->quantity));
+            } else {
+                $this->dispatchEvent(new ItemAdded($this->id(), $cartItem));
+            }
         }
-
-        $this->persist();
 
         return $this;
     }
@@ -220,6 +245,8 @@ final class Cart implements CartInterface
 
         $this->persist();
 
+        $this->dispatchEvent(new ItemUpdated($this->id(), $cartItem, $attributes));
+
         return $this;
     }
 
@@ -228,8 +255,14 @@ final class Cart implements CartInterface
      */
     public function removeItem(string $itemId): self
     {
+        $item = $this->items->get($itemId);
+
         $this->items->forget($itemId);
         $this->persist();
+
+        if ($item !== null) {
+            $this->dispatchEvent(new ItemRemoved($this->id(), $item));
+        }
 
         return $this;
     }
@@ -239,19 +272,28 @@ final class Cart implements CartInterface
      */
     public function clear(): self
     {
+        $clearedItems = $this->items;
+
         /** @var Collection<string, CartItem> $emptyItems */
         $emptyItems = collect();
         $this->items = $emptyItems;
         $this->persist();
 
+        if ($clearedItems->isNotEmpty()) {
+            $this->dispatchEvent(new CartCleared($this->id(), $clearedItems));
+        }
+
         return $this;
     }
 
     /**
-     * Clear all items from the cart.
+     * Clear all items and conditions from the cart.
      */
     public function reset(): self
     {
+        $clearedItems = $this->items;
+        $clearedConditions = $this->conditions;
+
         /** @var Collection<string, CartItem> $emptyItems */
         $emptyItems = collect();
         $this->items = $emptyItems;
@@ -261,6 +303,10 @@ final class Cart implements CartInterface
         $this->conditions = $emptyConditions;
 
         $this->persist();
+
+        if ($clearedItems->isNotEmpty() || $clearedConditions->isNotEmpty()) {
+            $this->dispatchEvent(new CartReset($this->id(), $clearedItems, $clearedConditions));
+        }
 
         return $this;
     }
@@ -379,14 +425,17 @@ final class Cart implements CartInterface
 
         // Check if a condition with the same name already exists
         $existingIndex = $this->conditions->search(fn (ConditionInterface $item): bool => $item->name === $condition->name);
+        $replaced = $existingIndex !== false;
 
-        if ($existingIndex !== false) {
+        if ($replaced) {
             $this->conditions->put((string) $existingIndex, $condition);
         } else {
             $this->conditions->push($condition);
         }
 
         $this->persist();
+
+        $this->dispatchEvent(new ConditionAdded($this->id(), $condition, $replaced));
 
         return $this;
     }
@@ -408,11 +457,17 @@ final class Cart implements CartInterface
      */
     public function clearConditions(): self
     {
+        $clearedConditions = $this->conditions;
+
         /** @var Collection<string, ConditionInterface> $emptyConditions */
         $emptyConditions = collect();
         $this->conditions = $emptyConditions;
 
         $this->persist();
+
+        if ($clearedConditions->isNotEmpty()) {
+            $this->dispatchEvent(new ConditionsCleared($this->id(), $clearedConditions));
+        }
 
         return $this;
     }
@@ -422,6 +477,8 @@ final class Cart implements CartInterface
      */
     public function removeCondition(string $conditionName): self
     {
+        $removedCondition = $this->conditions->first(fn (ConditionInterface $condition): bool => $condition->name === $conditionName);
+
         /** @var Collection<int, ConditionInterface> $filtered */
         $filtered = $this->conditions->reject(fn (ConditionInterface $condition): bool => $condition->name === $conditionName)->values();
 
@@ -431,6 +488,10 @@ final class Cart implements CartInterface
         $this->conditions = $reindexed;
 
         $this->persist();
+
+        if ($removedCondition !== null) {
+            $this->dispatchEvent(new ConditionRemoved($this->id(), $removedCondition));
+        }
 
         return $this;
     }
@@ -448,6 +509,7 @@ final class Cart implements CartInterface
             if ($item !== null) {
                 $item->addCondition($condition);
                 $this->persist();
+                $this->dispatchEvent(new ItemConditionAdded($this->id(), $item, $condition));
             }
         }
 
@@ -468,6 +530,7 @@ final class Cart implements CartInterface
             if ($item !== null) {
                 $item->removeCondition($conditionName);
                 $this->persist();
+                $this->dispatchEvent(new ItemConditionRemoved($this->id(), $item, $conditionName));
             }
         }
 
@@ -642,5 +705,15 @@ final class Cart implements CartInterface
             'items'      => $this->items,
             'conditions' => $this->conditions,
         ]);
+    }
+
+    /**
+     * Dispatch an event if events are enabled.
+     */
+    private function dispatchEvent(object $event): void
+    {
+        if (config('flexicart.events.enabled', true)) {
+            event($event);
+        }
     }
 }
