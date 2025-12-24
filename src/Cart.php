@@ -40,8 +40,8 @@ final class Cart implements CartInterface
     public function __construct(/**
      * The storage implementation.
      */
-        private readonly StorageInterface $storage)
-    {
+        private readonly StorageInterface $storage
+    ) {
         $data = $this->storage->get();
         $this->items = collect($data['items'] ?? []);
         $this->conditions = collect($data['conditions'] ?? []);
@@ -100,7 +100,7 @@ final class Cart implements CartInterface
      * @throws CartException
      * @throws PriceException
      */
-    public function addItem(array|CartItem $item): self
+    public function addItem(array | CartItem $item): self
     {
 
         if ($item instanceof CartItem) {
@@ -232,7 +232,7 @@ final class Cart implements CartInterface
     /**
      * Get a specific item from the cart.
      */
-    public function item(int|string $itemId): ?CartItem
+    public function item(int | string $itemId): ?CartItem
     {
         return $this->items->get($itemId);
     }
@@ -330,7 +330,7 @@ final class Cart implements CartInterface
      * Add a global condition to the cart.
      * If a condition with the same name already exists, it will be overwritten.
      */
-    public function addCondition(array|ConditionInterface $condition): self
+    public function addCondition(array | ConditionInterface $condition): self
     {
         // Check if a condition with the same name already exists
         /** @phpstan-ignore-next-line */
@@ -387,7 +387,7 @@ final class Cart implements CartInterface
      * @param  int|string  $itemId  The ID of the item
      * @param  Condition  $condition  The condition to add
      */
-    public function addItemCondition(int|string $itemId, ConditionInterface $condition): self
+    public function addItemCondition(int | string $itemId, ConditionInterface $condition): self
     {
         if ($this->items->has($itemId)) {
             $item = $this->items->get($itemId);
@@ -405,7 +405,7 @@ final class Cart implements CartInterface
      * @param  string  $conditionName  The name of the condition to remove
      * @return $this
      */
-    public function removeItemCondition(int|string $itemId, string $conditionName): static
+    public function removeItemCondition(int | string $itemId, string $conditionName): static
     {
         if ($this->items->has($itemId)) {
             $item = $this->items->get($itemId);

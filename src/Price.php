@@ -39,14 +39,14 @@ final class Price implements Stringable
      *
      * @throws PriceException
      */
-    public function __construct(int|float|string|Money $value)
+    public function __construct(int | float | string | Money $value)
     {
         $this->currency = (string) config('flexicart.currency', 'USD');
         $this->locale = (string) config('flexicart.locale', 'en_US');
 
         try {
             $this->money = $value instanceof Money ? $value : Money::of($value, $this->currency);
-        } catch (NumberFormatException|RoundingNecessaryException|UnknownCurrencyException $e) {
+        } catch (NumberFormatException | RoundingNecessaryException | UnknownCurrencyException $e) {
 
             throw new PriceException($e->getMessage());
         }
@@ -56,7 +56,7 @@ final class Price implements Stringable
     /**
      * Create a Price instance from a value
      */
-    public static function from(int|float|string|Money $value): self
+    public static function from(int | float | string | Money $value): self
     {
         return new self($value);
     }
@@ -98,7 +98,7 @@ final class Price implements Stringable
      *
      * @throws MathException|MoneyMismatchException|UnknownCurrencyException|PriceException
      */
-    public function plus(self|int|float $price): self
+    public function plus(self | int | float $price): self
     {
         $addMoney = $price instanceof self
             ? $price->money
@@ -114,13 +114,13 @@ final class Price implements Stringable
      * @throws MathException|MoneyMismatchException
      * @throws PriceException
      */
-    public function subtract(self|int|float $price): self
+    public function subtract(self | int | float $price): self
     {
         try {
             $subMoney = $price instanceof self
                 ? $price->money
                 : Money::of($price, $this->currency);
-        } catch (NumberFormatException|RoundingNecessaryException|UnknownCurrencyException $e) {
+        } catch (NumberFormatException | RoundingNecessaryException | UnknownCurrencyException $e) {
 
             throw new PriceException($e->getMessage());
         }
@@ -130,7 +130,7 @@ final class Price implements Stringable
         if ($result->isNegative()) {
             try {
                 $result = Money::of(0, $this->currency);
-            } catch (NumberFormatException|RoundingNecessaryException|UnknownCurrencyException $e) {
+            } catch (NumberFormatException | RoundingNecessaryException | UnknownCurrencyException $e) {
 
                 throw new PriceException($e->getMessage());
             }
@@ -149,7 +149,7 @@ final class Price implements Stringable
      * @throws MathException
      * @throws PriceException
      */
-    public function multiplyBy(int|float $factor, ?RoundingMode $roundingMode = null): self
+    public function multiplyBy(int | float $factor, ?RoundingMode $roundingMode = null): self
     {
         // Use HALF_UP as the default rounding mode if none is specified
         $mode = $roundingMode ?? RoundingMode::HALF_UP;
@@ -164,7 +164,7 @@ final class Price implements Stringable
      * @throws PriceException
      * @throws InvalidArgumentException If the divisor is zero
      */
-    public function divideBy(int|float $divisor): self
+    public function divideBy(int | float $divisor): self
     {
         if ($divisor == 0) {
             throw new InvalidArgumentException('Cannot divide by zero');

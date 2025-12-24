@@ -15,7 +15,7 @@ interface CartInterface
      *
      * @return $this
      */
-    public function addItem(array|CartItem $item): self;
+    public function addItem(array | CartItem $item): self;
 
     /**
      * Get the cart contents

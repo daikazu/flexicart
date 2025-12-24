@@ -26,7 +26,7 @@ final class CartItem implements CartItemInterface
     /**
      * Item identifier
      */
-    public readonly int|string $id;
+    public readonly int | string $id;
 
     /**
      * Item name
@@ -118,7 +118,7 @@ final class CartItem implements CartItemInterface
      * Add a condition to the item.
      * If a condition with the same name already exists, it will be overwritten.
      */
-    public function addCondition(array|ConditionInterface $condition): self
+    public function addCondition(array | ConditionInterface $condition): self
     {
 
         if (is_array($condition)) {
