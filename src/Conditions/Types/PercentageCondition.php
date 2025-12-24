@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Daikazu\Flexicart\Conditions\Types;
 
 use Brick\Math\Exception\MathException;
@@ -15,7 +17,7 @@ final class PercentageCondition extends Condition
 
     public function calculate(?Price $price = null): Price
     {
-        if ($price === null) {
+        if (! $price instanceof \Daikazu\Flexicart\Price) {
             throw new PriceException('Price is required for percentage conditions.');
         }
 

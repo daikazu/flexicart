@@ -38,7 +38,7 @@ class CleanupCartsCommand extends Command
                 $count = CartModel::count();
 
                 // Get all carts and delete them one by one to trigger Eloquent events
-                CartModel::all()->each(function ($cart) {
+                CartModel::all()->each(function ($cart): void {
                     $cart->delete();
                 });
 
@@ -77,7 +77,7 @@ class CleanupCartsCommand extends Command
             $count = $oldCarts->count();
 
             // Delete each cart to trigger Eloquent events
-            $oldCarts->each(function ($cart) {
+            $oldCarts->each(function ($cart): void {
                 $cart->delete();
             });
 

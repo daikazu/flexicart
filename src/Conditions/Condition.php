@@ -79,10 +79,8 @@ abstract class Condition implements ConditionInterface
         }
 
         // Validate target parameter if provided
-        if (isset($parameters['target'])) {
-            if (! ($parameters['target'] instanceof ConditionTarget)) {
-                throw new InvalidArgumentException('Parameter "target" must be an instance of ConditionTarget enum.');
-            }
+        if (isset($parameters['target']) && ! ($parameters['target'] instanceof ConditionTarget)) {
+            throw new InvalidArgumentException('Parameter "target" must be an instance of ConditionTarget enum.');
         }
 
         // Validate optional parameters

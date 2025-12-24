@@ -20,7 +20,7 @@ final class PercentageTaxCondition extends Condition
 
     public function calculate(?Price $price = null): Price
     {
-        if ($price === null) {
+        if (! $price instanceof \Daikazu\Flexicart\Price) {
             throw new PriceException('Price is required for percentage conditions.');
         }
 

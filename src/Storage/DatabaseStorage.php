@@ -131,19 +131,12 @@ final readonly class DatabaseStorage implements StorageInterface
                     $quantity = $item->quantity;
                     $attributes = $item->attributes;
                     $itemConditions = $item->conditions;
-
                     // Convert Condition objects to arrays
-                    if ($itemConditions instanceof Collection) {
-                        $conditionsArray = [];
-                        foreach ($itemConditions as $condition) {
-                            if ($condition instanceof Condition) {
-                                $conditionsArray[] = $condition->toArray();
-                            } else {
-                                $conditionsArray[] = $condition;
-                            }
-                        }
-                        $itemConditions = collect($conditionsArray);
+                    $conditionsArray = [];
+                    foreach ($itemConditions as $condition) {
+                        $conditionsArray[] = $condition instanceof Condition ? $condition->toArray() : $condition;
                     }
+                    $itemConditions = collect($conditionsArray);
                 } elseif (is_array($item)) {
                     $name = is_string($item['name'] ?? null) ? $item['name'] : '';
                     $price = $item['price'] ?? 0;
@@ -156,11 +149,7 @@ final readonly class DatabaseStorage implements StorageInterface
                     // Convert Condition objects to arrays
                     $conditionsArray = [];
                     foreach ($itemConditions as $condition) {
-                        if ($condition instanceof Condition) {
-                            $conditionsArray[] = $condition->toArray();
-                        } else {
-                            $conditionsArray[] = $condition;
-                        }
+                        $conditionsArray[] = $condition instanceof Condition ? $condition->toArray() : $condition;
                     }
                     $itemConditions = collect($conditionsArray);
                 } else {
@@ -190,11 +179,7 @@ final readonly class DatabaseStorage implements StorageInterface
         if (is_array($conditions)) {
             $conditionsArray = [];
             foreach ($conditions as $condition) {
-                if ($condition instanceof Condition) {
-                    $conditionsArray[] = $condition->toArray();
-                } else {
-                    $conditionsArray[] = $condition;
-                }
+                $conditionsArray[] = $condition instanceof Condition ? $condition->toArray() : $condition;
             }
             $conditionsCollection = collect($conditionsArray);
         } elseif ($conditions instanceof Condition) {

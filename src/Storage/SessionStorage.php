@@ -18,7 +18,7 @@ final readonly class SessionStorage implements StorageInterface
         private SessionManager $session,
         ?string $key = null
     ) {
-        $keyValue = $key !== null && $key !== '' && $key !== '0' ? $key : config('flexicart.session_key', 'flexible_cart');
+        $keyValue = in_array($key, [null, '', '0'], true) ? config('flexicart.session_key', 'flexible_cart') : $key;
         // Ensure it's a string for type safety
         $this->key = is_string($keyValue) ? $keyValue : 'flexible_cart';
     }

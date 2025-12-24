@@ -300,9 +300,7 @@ final class Cart implements CartInterface
      */
     public function count(): int
     {
-        return $this->items->sum(function (CartItem $item): int {
-            return $item->quantity;
-        });
+        return $this->items->sum(fn (CartItem $item): int => $item->quantity);
     }
 
     /**

@@ -218,12 +218,13 @@ final class CartItem implements CartItemInterface
     {
 
         $compoundDiscounts = config('flexicart.compound_discounts', false);
-        $originalUnitPrice = $this->unitPrice();
+        $originalUnitPrice = $this->price;
         $unitPrice = $originalUnitPrice;
         $subtotalAdjustments = new Price(0);
         $fixedSubtotalAdjustments = new Price(0);
 
-        $this->conditions = $this->conditions->sortBy(function (ConditionInterface $condition): array {
+        // Sort conditions for processing without mutating the original collection
+        $sortedConditions = $this->conditions->sortBy(function (ConditionInterface $condition): array {
             // Define target priority (lower number = higher priority)
             /** @var array<string, int> */
             $targetPriorities = [
@@ -242,7 +243,7 @@ final class CartItem implements CartItemInterface
             ];
         });
 
-        foreach ($this->conditions as $condition) {
+        foreach ($sortedConditions as $condition) {
 
             // TARGET IS ITEM
             if ($condition->target === ConditionTarget::ITEM
@@ -324,7 +325,7 @@ final class CartItem implements CartItemInterface
             'name'       => $this->name,
             'price'      => $this->price,
             'quantity'   => $this->quantity,
-            'unitPrice'  => $this->unitPrice(),
+            'unitPrice'  => $this->price,
             'subtotal'   => $this->subtotal(),
             'attributes' => $this->attributes->toArray(),
             'conditions' => $this->conditions->map(fn (ConditionInterface $condition): array => $condition->toArray())->toArray(),
