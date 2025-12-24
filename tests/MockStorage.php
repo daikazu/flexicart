@@ -10,6 +10,7 @@ class MockStorage implements StorageInterface
     private array $data = [
         'items'      => [],
         'conditions' => [],
+        'rules'      => [],
     ];
 
     public function __construct(
@@ -40,6 +41,7 @@ class MockStorage implements StorageInterface
         $this->data = [
             'items'      => [],
             'conditions' => [],
+            'rules'      => [],
         ];
     }
 
