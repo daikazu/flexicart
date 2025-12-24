@@ -1,9 +1,21 @@
 {
     "preset": "laravel",
     "rules": {
-        "binary_operator_spaces" : {
+        "array_syntax": {
+            "syntax": "short"
+        },
+        "yoda_style": false,
+        "blank_line_before_statement": false,
+        "no_unused_imports": true,
+        "declare_strict_types": false,
+        "method_argument_space": true,
+        "single_trait_insert_per_statement": true,
+        "types_spaces": {
+            "space": "single"
+        },
+        "binary_operator_spaces": {
             "operators": {
-                "=>" : "align_single_space_minimal"
+                "=>": "align_single_space_minimal"
             }
         },
         "blank_line_between_import_groups": true,
