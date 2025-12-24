@@ -107,4 +107,24 @@ return [
         'enabled' => env('CART_EVENTS_ENABLED', true),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cart Merging
+    |--------------------------------------------------------------------------
+    |
+    | These settings control how carts are merged when using the mergeFrom()
+    | method. This is useful for merging guest carts with user carts on login.
+    |
+    | Strategies:
+    |   - 'sum': Add quantities together, source attributes win, combine conditions
+    |   - 'replace': Source completely replaces target
+    |   - 'max': Keep highest quantity, source attributes win, combine conditions
+    |   - 'keep_target': Keep target values, only add items that don't exist
+    |
+    */
+    'merge' => [
+        'default_strategy' => env('CART_MERGE_STRATEGY', 'sum'),
+        'delete_source' => env('CART_MERGE_DELETE_SOURCE', true),
+    ],
+
 ];

@@ -15,6 +15,7 @@ use Daikazu\Flexicart\Contracts\StorageInterface;
 use Daikazu\Flexicart\Enums\ConditionTarget;
 use Daikazu\Flexicart\Enums\ConditionType;
 use Daikazu\Flexicart\Events\CartCleared;
+use Daikazu\Flexicart\Events\CartMerged;
 use Daikazu\Flexicart\Events\CartReset;
 use Daikazu\Flexicart\Events\ConditionAdded;
 use Daikazu\Flexicart\Events\ConditionRemoved;
@@ -27,6 +28,8 @@ use Daikazu\Flexicart\Events\ItemRemoved;
 use Daikazu\Flexicart\Events\ItemUpdated;
 use Daikazu\Flexicart\Exceptions\CartException;
 use Daikazu\Flexicart\Exceptions\PriceException;
+use Daikazu\Flexicart\Strategies\MergeStrategyFactory;
+use Daikazu\Flexicart\Strategies\MergeStrategyInterface;
 use Illuminate\Support\Collection;
 
 final class Cart implements CartInterface
@@ -654,6 +657,78 @@ final class Cart implements CartInterface
             'conditions' => $this->conditions
                 ->map(fn (ConditionInterface $condition): ConditionInterface => $condition),
         ];
+    }
+
+    /**
+     * Merge another cart into this cart.
+     *
+     * @param  Cart|string  $source  The source cart or cart ID to merge from
+     * @param  string|MergeStrategyInterface|null  $strategy  The merge strategy to use (default from config)
+     *
+     * @throws CartException
+     * @throws PriceException
+     */
+    public function mergeFrom(Cart|string $source, string|MergeStrategyInterface|null $strategy = null): self
+    {
+        // Resolve source cart
+        $sourceCart = $source instanceof Cart ? $source : self::getCartById($source);
+
+        if ($sourceCart === null) {
+            throw new CartException('Source cart not found');
+        }
+
+        // Don't merge a cart into itself
+        if ($sourceCart->id() === $this->id()) {
+            return $this;
+        }
+
+        // Resolve strategy
+        if ($strategy === null) {
+            $strategy = MergeStrategyFactory::default();
+        } elseif (is_string($strategy)) {
+            $strategy = MergeStrategyFactory::make($strategy);
+        }
+
+        /** @var Collection<string, CartItem> $mergedItems */
+        $mergedItems = collect();
+
+        // Merge items
+        foreach ($sourceCart->items() as $sourceItem) {
+            $itemId = (string) $sourceItem->id;
+            $existingItem = $this->items->get($itemId);
+
+            if ($existingItem !== null) {
+                // Item exists in both carts - merge using strategy
+                $mergedData = $strategy->mergeItem($existingItem, $sourceItem);
+            } else {
+                // New item - add it
+                $mergedData = $strategy->handleNewItem($sourceItem);
+            }
+
+            $cartItem = new CartItem($mergedData);
+            $this->items->put($itemId, $cartItem);
+            $mergedItems->put($itemId, $cartItem);
+        }
+
+        // Merge conditions using strategy
+        $this->conditions = $strategy->mergeConditions($this->conditions, $sourceCart->conditions());
+
+        $this->persist();
+
+        // Dispatch event
+        $this->dispatchEvent(new CartMerged(
+            $this->id(),
+            $sourceCart->id(),
+            $mergedItems,
+            $strategy->name()
+        ));
+
+        // Delete source cart if configured
+        if (config('flexicart.merge.delete_source', true)) {
+            $sourceCart->reset();
+        }
+
+        return $this;
     }
 
     /**
