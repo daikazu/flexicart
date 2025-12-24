@@ -11,7 +11,7 @@ use Illuminate\Support\Collection;
 /**
  * @property int|null $user_id
  * @property string|null $session_id
- * @property Collection $conditions
+ * @property Collection<int, mixed> $conditions
  * @property string $created_at
  * @property string $updated_at
  */
@@ -31,12 +31,15 @@ final class CartModel extends Model
     {
         parent::boot();
 
-        self::deleting(function ($cart) {
+        self::deleting(function (CartModel $cart): void {
             $cart->items()->delete();
         });
 
     }
 
+    /**
+     * @return HasMany<CartItemModel, $this>
+     */
     public function items(): HasMany
     {
         return $this->hasMany(CartItemModel::class, 'cart_id');

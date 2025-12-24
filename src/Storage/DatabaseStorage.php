@@ -21,7 +21,8 @@ final readonly class DatabaseStorage implements StorageInterface
 
     public function __construct(private CartModel $cartModel)
     {
-        $this->userId = Auth::check() ? Auth::id() : null;
+        $authId = Auth::check() ? Auth::id() : null;
+        $this->userId = is_int($authId) ? $authId : null;
 
         // Generate a cart ID for guest users or get existing cart for authenticated users
         $this->cartId = $this->initializeCartId();
@@ -29,12 +30,15 @@ final readonly class DatabaseStorage implements StorageInterface
 
     /**
      * Get the cart data from the database.
+     *
+     * @return array<string, mixed>
      */
     public function get(): array
     {
         $cartItems = CartItemModel::where('cart_id', $this->cartId)->get();
         $cart = CartModel::find($this->cartId);
 
+        /** @var array<string, mixed> */
         $items = [];
         foreach ($cartItems as $item) {
             $itemConditions = $item->conditions ?? [];
@@ -89,6 +93,9 @@ final readonly class DatabaseStorage implements StorageInterface
 
     /**
      * Store the cart data in the database.
+     *
+     * @param  array<string, mixed>  $cart
+     * @return array<string, mixed>
      */
     public function put(array $cart): array
     {
@@ -107,23 +114,46 @@ final readonly class DatabaseStorage implements StorageInterface
         }
 
         // First, remove all items that are no longer in the cart
-        $itemIds = array_keys($items);
-        CartItemModel::where('cart_id', $this->cartId)
-            ->whereNotIn('item_id', $itemIds)
-            ->delete();
+        if (is_array($items)) {
+            $itemIds = array_keys($items);
+            CartItemModel::where('cart_id', $this->cartId)
+                ->whereNotIn('item_id', $itemIds)
+                ->delete();
+        }
 
         // Then, update or create items
-        foreach ($items as $itemId => $item) {
-            // Check if $item is a CartItem object or an array
-            if ($item instanceof CartItem) {
-                $name = $item->name;
-                $price = $item->unitPrice();
-                $quantity = $item->quantity;
-                $attributes = $item->attributes;
-                $itemConditions = $item->conditions;
+        if (is_array($items)) {
+            foreach ($items as $itemId => $item) {
+                // Check if $item is a CartItem object or an array
+                if ($item instanceof CartItem) {
+                    $name = $item->name;
+                    $price = $item->unitPrice();
+                    $quantity = $item->quantity;
+                    $attributes = $item->attributes;
+                    $itemConditions = $item->conditions;
 
-                // Convert Condition objects to arrays
-                if ($itemConditions instanceof Collection) {
+                    // Convert Condition objects to arrays
+                    if ($itemConditions instanceof Collection) {
+                        $conditionsArray = [];
+                        foreach ($itemConditions as $condition) {
+                            if ($condition instanceof Condition) {
+                                $conditionsArray[] = $condition->toArray();
+                            } else {
+                                $conditionsArray[] = $condition;
+                            }
+                        }
+                        $itemConditions = collect($conditionsArray);
+                    }
+                } elseif (is_array($item)) {
+                    $name = is_string($item['name'] ?? null) ? $item['name'] : '';
+                    $price = $item['price'] ?? 0;
+                    $quantity = is_int($item['quantity'] ?? null) ? $item['quantity'] : 1;
+                    $attributesData = $item['attributes'] ?? [];
+                    $attributes = collect(is_array($attributesData) ? $attributesData : []);
+                    $conditionsSource = $item['conditions'] ?? [];
+                    $itemConditions = collect(is_array($conditionsSource) ? $conditionsSource : []);
+
+                    // Convert Condition objects to arrays
                     $conditionsArray = [];
                     foreach ($itemConditions as $condition) {
                         if ($condition instanceof Condition) {
@@ -133,45 +163,30 @@ final readonly class DatabaseStorage implements StorageInterface
                         }
                     }
                     $itemConditions = collect($conditionsArray);
+                } else {
+                    continue;
                 }
-            } else {
-                $name = $item['name'];
-                $price = $item['price'];
-                $quantity = $item['quantity'];
-                $attributes = collect($item['attributes'] ?? []);
-                $itemConditions = collect($item['conditions'] ?? []);
 
-                // Convert Condition objects to arrays
-                $conditionsArray = [];
-                foreach ($itemConditions as $condition) {
-                    if ($condition instanceof Condition) {
-                        $conditionsArray[] = $condition->toArray();
-                    } else {
-                        $conditionsArray[] = $condition;
-                    }
-                }
-                $itemConditions = collect($conditionsArray);
+                CartItemModel::updateOrCreate(
+                    [
+                        'cart_id' => $this->cartId,
+                        'item_id' => $itemId,
+                    ],
+                    [
+                        'name'       => $name,
+                        'price'      => $price instanceof Price ? $price->toFloat() : $price,
+                        'quantity'   => $quantity,
+                        'attributes' => $attributes,
+                        'conditions' => $itemConditions,
+                    ]
+                );
             }
-
-            CartItemModel::updateOrCreate(
-                [
-                    'cart_id' => $this->cartId,
-                    'item_id' => $itemId,
-                ],
-                [
-                    'name'       => $name,
-                    'price'      => $price instanceof Price ? $price->toFloat() : $price,
-                    'quantity'   => $quantity,
-                    'attributes' => $attributes,
-                    'conditions' => $itemConditions,
-                ]
-            );
         }
 
         // Store global conditions in the database
         $cartModel = CartModel::find($this->cartId);
 
-        // Convert Condition objects to arrays
+        // Convert Condition objects to arrays and prepare Collection
         if (is_array($conditions)) {
             $conditionsArray = [];
             foreach ($conditions as $condition) {
@@ -181,13 +196,19 @@ final readonly class DatabaseStorage implements StorageInterface
                     $conditionsArray[] = $condition;
                 }
             }
-            $conditions = $conditionsArray;
+            $conditionsCollection = collect($conditionsArray);
         } elseif ($conditions instanceof Condition) {
-            $conditions = [$conditions->toArray()];
+            $conditionsCollection = collect([$conditions->toArray()]);
+        } elseif ($conditions instanceof Collection) {
+            $conditionsCollection = $conditions;
+        } else {
+            $conditionsCollection = collect([]);
         }
 
-        $cartModel->conditions = $conditions;
-        $cartModel->save();
+        if ($cartModel !== null) {
+            $cartModel->conditions = $conditionsCollection;
+            $cartModel->save();
+        }
 
         return $cart;
 
@@ -202,8 +223,10 @@ final readonly class DatabaseStorage implements StorageInterface
 
         // Clear global conditions from the database
         $cartModel = CartModel::find($this->cartId);
-        $cartModel->conditions = [];
-        $cartModel->save();
+        if ($cartModel !== null) {
+            $cartModel->conditions = collect([]);
+            $cartModel->save();
+        }
     }
 
     /**
@@ -216,6 +239,8 @@ final readonly class DatabaseStorage implements StorageInterface
 
     /**
      * Get a cart by ID.
+     *
+     * @return array<string, mixed>|null
      */
     public function getCartById(string $cartId): ?array
     {
@@ -227,6 +252,7 @@ final readonly class DatabaseStorage implements StorageInterface
 
         $cartItems = CartItemModel::where('cart_id', $cart->id)->get();
 
+        /** @var array<string, mixed> */
         $items = [];
         foreach ($cartItems as $item) {
             $itemConditions = $item->conditions ?? [];

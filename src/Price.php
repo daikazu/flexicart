@@ -41,8 +41,11 @@ final class Price implements Stringable
      */
     public function __construct(int | float | string | Money $value)
     {
-        $this->currency = (string) config('flexicart.currency', 'USD');
-        $this->locale = (string) config('flexicart.locale', 'en_US');
+        $currencyConfig = config('flexicart.currency', 'USD');
+        $this->currency = is_string($currencyConfig) ? $currencyConfig : 'USD';
+
+        $localeConfig = config('flexicart.locale', 'en_US');
+        $this->locale = is_string($localeConfig) ? $localeConfig : 'en_US';
 
         try {
             $this->money = $value instanceof Money ? $value : Money::of($value, $this->currency);

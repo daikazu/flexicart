@@ -14,9 +14,13 @@ final readonly class SessionStorage implements StorageInterface
     /**
      * Create a new session storage instance.
      */
-    public function __construct(private SessionManager $session, ?string $key = null)
-    {
-        $this->key = $key !== null && $key !== '' && $key !== '0' ? $key : config('flexicart.session_key', 'flexible_cart');
+    public function __construct(
+        private SessionManager $session,
+        ?string $key = null
+    ) {
+        $keyValue = $key !== null && $key !== '' && $key !== '0' ? $key : config('flexicart.session_key', 'flexible_cart');
+        // Ensure it's a string for type safety
+        $this->key = is_string($keyValue) ? $keyValue : 'flexible_cart';
     }
 
     /**
@@ -29,6 +33,8 @@ final readonly class SessionStorage implements StorageInterface
 
     /**
      * Get a cart by ID.
+     *
+     * @return array<string, mixed>|null
      */
     public function getCartById(string $cartId): ?array
     {
@@ -43,17 +49,26 @@ final readonly class SessionStorage implements StorageInterface
 
     /**
      * Get the cart data from the session.
+     *
+     * @return array<string, mixed>
      */
     public function get(): array
     {
         $data = $this->session->get($this->key, []);
 
+        // Ensure $data is an array
+        if (! is_array($data)) {
+            $data = [];
+        }
+
         // If the data is already in the new format, return it
-        if (isset($data['items'])) {
+        if (isset($data['items']) && is_array($data['items'])) {
+            /** @var array<string, mixed> */
             return $data;
         }
 
         // Otherwise, convert it to the new format
+        /** @var array<string, mixed> */
         return [
             'items'      => $data,
             'conditions' => [],
@@ -62,6 +77,9 @@ final readonly class SessionStorage implements StorageInterface
 
     /**
      * Store the cart data in the session.
+     *
+     * @param  array<string, mixed>  $cart
+     * @return array<string, mixed>
      */
     public function put(array $cart): array
     {

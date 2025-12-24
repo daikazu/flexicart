@@ -53,6 +53,8 @@ interface CartItemInterface
 
     /**
      * Convert the item to an array.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(): array;
 }

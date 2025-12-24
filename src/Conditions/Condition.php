@@ -16,6 +16,9 @@ abstract class Condition implements ConditionInterface
     public ConditionType $type;
     public ConditionTarget $target;
 
+    /**
+     * @param  array<string, mixed>|Fluent<string, mixed>  $attributes
+     */
     public function __construct(
         public readonly string $name,
         public readonly int | float $value,
@@ -33,7 +36,7 @@ abstract class Condition implements ConditionInterface
     /**
      * Create a new condition instance from an array of parameters.
      *
-     * @param  array  $parameters  Array containing the constructor parameters
+     * @param  array<string, mixed>  $parameters  Array containing the constructor parameters
      *
      * @phpstan-return static
      *
@@ -60,7 +63,7 @@ abstract class Condition implements ConditionInterface
     /**
      * Validate the parameters array for the make method.
      *
-     * @param  array  $parameters  Array containing the constructor parameters
+     * @param  array<string, mixed>  $parameters  Array containing the constructor parameters
      *
      * @throws InvalidArgumentException When required parameters are missing or invalid
      */
@@ -109,6 +112,8 @@ abstract class Condition implements ConditionInterface
 
     /**
      * Convert the condition to an array representation.
+     *
+     * @return array<string, mixed>
      */
     public function toArray(): array
     {

@@ -45,28 +45,43 @@ final class CartItem implements CartItemInterface
 
     /**
      * Item-specific attributes (color, size, etc.)
+     *
+     * @var Fluent<string, mixed>
      */
     public Fluent $attributes;
 
     /**
      * Item-specific conditions (discounts, add-ons)
+     *
+     * @var Collection<int, ConditionInterface>
      */
     public Collection $conditions;
 
     /**
      * Create a new cart item instance.
      *
+     * @param  array<string, mixed>  $item
+     *
      * @throws PriceException
      */
     public function __construct(array $item)
     {
-        $this->id = $item['id'];
-        $this->name = $item['name'];
+        $idValue = $item['id'] ?? '';
+        $this->id = is_int($idValue) || is_string($idValue) ? $idValue : '';
+        $this->name = is_string($item['name'] ?? null) ? $item['name'] : '';
 
         // Convert price to Price object if it's not already
-        $this->price = $item['price'] instanceof Price ? $item['price'] : new Price($item['price']);
+        $priceValue = $item['price'] ?? 0;
+        if ($priceValue instanceof Price) {
+            $this->price = $priceValue;
+        } elseif (is_int($priceValue) || is_float($priceValue) || is_string($priceValue)) {
+            $this->price = new Price($priceValue);
+        } else {
+            $this->price = new Price(0);
+        }
 
-        $this->quantity = max(1, (int) ($item['quantity'] ?? 1)); // Ensure quantity is at least 1
+        $quantityValue = $item['quantity'] ?? 1;
+        $this->quantity = max(1, is_int($quantityValue) ? $quantityValue : (is_numeric($quantityValue) ? (int) $quantityValue : 1));
 
         if (isset($item['attributes'])) {
             if (is_array($item['attributes'])) {
@@ -80,20 +95,27 @@ final class CartItem implements CartItemInterface
             $this->attributes = fluent([]);
         }
 
-        $this->conditions = collect();
+        /** @var Collection<int, ConditionInterface> $emptyConditions */
+        $emptyConditions = collect();
+        $this->conditions = $emptyConditions;
 
         // Set conditions if provided
-        if (isset($item['conditions'])) {
-            foreach ($item['conditions'] as $condition) {
+        $conditionsValue = $item['conditions'] ?? [];
+        if (is_array($conditionsValue) || $conditionsValue instanceof Collection) {
+            foreach ($conditionsValue as $condition) {
                 if ($condition instanceof ConditionInterface) {
                     $this->conditions->push($condition);
                 }
             }
         }
-        $this->taxable = $item['taxable'] ?? true;
+
+        $taxableValue = $item['taxable'] ?? true;
+        $this->taxable = is_bool($taxableValue) ? $taxableValue : true;
     }
 
     /**
+     * @param  array<string, mixed>  $item
+     *
      * @throws PriceException
      */
     public static function make(array $item): CartItem
@@ -117,6 +139,8 @@ final class CartItem implements CartItemInterface
     /**
      * Add a condition to the item.
      * If a condition with the same name already exists, it will be overwritten.
+     *
+     * @param  array<string, mixed>|ConditionInterface  $condition
      */
     public function addCondition(array | ConditionInterface $condition): self
     {
@@ -126,8 +150,7 @@ final class CartItem implements CartItemInterface
         }
 
         // Check if a condition with the same name already exists
-        /** @phpstan-ignore-next-line */
-        $existingIndex = $this->conditions->search(fn ($item) => $item->name === $condition->name);
+        $existingIndex = $this->conditions->search(fn (ConditionInterface $item): bool => $item->name === $condition->name);
 
         if ($existingIndex !== false) {
             $this->conditions->put($existingIndex, $condition);
@@ -140,6 +163,8 @@ final class CartItem implements CartItemInterface
 
     /**
      * Add multiple conditions to the instance.
+     *
+     * @param  array<int, array<string, mixed>|ConditionInterface>  $conditions
      */
     public function addConditions(array $conditions): self
     {
@@ -156,7 +181,7 @@ final class CartItem implements CartItemInterface
     public function removeCondition(string $conditionName): self
     {
 
-        $this->conditions = $this->conditions->reject(fn ($condition) => $condition->name === $conditionName)->values();
+        $this->conditions = $this->conditions->reject(fn (ConditionInterface $condition): bool => $condition->name === $conditionName)->values();
 
         return $this;
     }
@@ -166,7 +191,9 @@ final class CartItem implements CartItemInterface
      */
     public function clearConditions(): self
     {
-        $this->conditions = collect();
+        /** @var Collection<int, ConditionInterface> $emptyConditions */
+        $emptyConditions = collect();
+        $this->conditions = $emptyConditions;
 
         return $this;
     }
@@ -196,18 +223,22 @@ final class CartItem implements CartItemInterface
         $subtotalAdjustments = new Price(0);
         $fixedSubtotalAdjustments = new Price(0);
 
-        $this->conditions = $this->conditions->sortBy(function ($condition) {
+        $this->conditions = $this->conditions->sortBy(function (ConditionInterface $condition): array {
             // Define target priority (lower number = higher priority)
+            /** @var array<string, int> */
             $targetPriorities = [
                 ConditionTarget::ITEM->value     => 1,
                 ConditionTarget::SUBTOTAL->value => 2,
-
             ];
 
+            $targetValue = $condition->target->value;
+            $priority = is_string($targetValue) && isset($targetPriorities[$targetValue]) ? $targetPriorities[$targetValue] : 999;
+            $conditionValue = is_int($condition->value) || is_float($condition->value) ? $condition->value : 0;
+
             return [
-                $targetPriorities[$condition->target->value] ?? 999, // Target priority first
+                $priority, // Target priority first
                 $condition->order, // Custom order second (ascending)
-                -$condition->value, // Value as tiebreaker (descending)
+                -$conditionValue, // Value as tiebreaker (descending)
             ];
         });
 
@@ -296,7 +327,7 @@ final class CartItem implements CartItemInterface
             'unitPrice'  => $this->unitPrice(),
             'subtotal'   => $this->subtotal(),
             'attributes' => $this->attributes->toArray(),
-            'conditions' => $this->conditions->map(fn ($condition) => $condition->toArray())->toArray(),
+            'conditions' => $this->conditions->map(fn (ConditionInterface $condition): array => $condition->toArray())->toArray(),
 
         ];
 

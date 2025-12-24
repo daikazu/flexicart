@@ -10,6 +10,7 @@ use Daikazu\Flexicart\Contracts\StorageInterface;
 use Daikazu\Flexicart\Models\CartModel;
 use Daikazu\Flexicart\Storage\DatabaseStorage;
 use Daikazu\Flexicart\Storage\SessionStorage;
+use Illuminate\Foundation\Application;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -35,30 +36,36 @@ final class CartServiceProvider extends PackageServiceProvider
     {
 
         // Bind storage implementation
-        $this->app->singleton(StorageInterface::class, function ($app) {
-            // Check if a custom storage class is specified
-            $customStorageClass = $app['config']->get('flexicart.storage_class');
+        $this->app->singleton(StorageInterface::class, function (Application $app): StorageInterface {
+            /** @var \Illuminate\Config\Repository $config */
+            $config = $app['config'];
 
-            if ($customStorageClass !== null && class_exists($customStorageClass)) {
-                // Create an instance of the custom storage class
+            // Check if a custom storage class is specified
+            $customStorageClass = $config->get('flexicart.storage_class');
+
+            if (is_string($customStorageClass) && class_exists($customStorageClass)) {
+                /** @var StorageInterface */
                 return new $customStorageClass;
             }
 
             // Otherwise, use the built-in storage classes
-            $config = $app['config']->get('flexicart.storage', 'session');
+            $storageType = $config->get('flexicart.storage', 'session');
 
-            if ($config === 'database') {
+            if ($storageType === 'database') {
                 return new DatabaseStorage(new CartModel);
             }
 
-            return new SessionStorage($app['session']);
+            /** @var \Illuminate\Session\SessionManager $session */
+            $session = $app['session'];
+
+            return new SessionStorage($session);
         });
 
         // Bind cart implementation
-        $this->app->singleton(CartInterface::class, fn ($app) => new Cart($app->make(StorageInterface::class)));
+        $this->app->singleton(CartInterface::class, fn (Application $app): Cart => new Cart($app->make(StorageInterface::class)));
 
         // Bind cart alias
-        $this->app->singleton('cart', fn ($app) => $app->make(CartInterface::class));
+        $this->app->singleton('cart', fn (Application $app): CartInterface => $app->make(CartInterface::class));
 
     }
 

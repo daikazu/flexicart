@@ -15,7 +15,7 @@ use Illuminate\Support\Fluent;
  * @property ConditionTarget $target
  * @property string $name
  * @property int|float $value
- * @property array|Fluent $attributes
+ * @property array<string, mixed>|Fluent<string, mixed> $attributes
  * @property int $order
  * @property bool $taxable
  */
@@ -36,4 +36,11 @@ interface ConditionInterface
      * Format the condition's value for display based on its type.
      */
     public function formattedValue(): string;
+
+    /**
+     * Convert the condition to an array representation.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array;
 }

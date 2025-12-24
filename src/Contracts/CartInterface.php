@@ -13,18 +13,22 @@ interface CartInterface
     /**
      * Add an item to the cart
      *
+     * @param  array<string, mixed>|CartItem  $item
      * @return $this
      */
     public function addItem(array | CartItem $item): self;
 
     /**
      * Get the cart contents
+     *
+     * @return Collection<string, CartItem>
      */
     public function items(): Collection;
 
     /**
      * Update an item in the cart
      *
+     * @param  array<string, mixed>  $attributes
      * @return $this
      */
     public function updateItem(string $itemId, array $attributes): self;

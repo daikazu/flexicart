@@ -8,11 +8,16 @@ interface StorageInterface
 {
     /**
      * Get the cart data from storage
+     *
+     * @return array<string, mixed>
      */
     public function get(): array;
 
     /**
      * Store the cart data
+     *
+     * @param  array<string, mixed>  $cart
+     * @return array<string, mixed>
      */
     public function put(array $cart): array;
 
@@ -28,6 +33,8 @@ interface StorageInterface
 
     /**
      * Get a cart by ID
+     *
+     * @return array<string, mixed>|null
      */
     public function getCartById(string $cartId): ?array;
 }

@@ -63,7 +63,8 @@ class CleanupCartsCommand extends Command
         }
 
         // Get the cart lifetime from config (default to 1 week)
-        $lifetime = (int) config('flexicart.cleanup.lifetime', 60 * 24 * 7);
+        $lifetimeValue = config('flexicart.cleanup.lifetime', 60 * 24 * 7);
+        $lifetime = is_numeric($lifetimeValue) ? (int) $lifetimeValue : 60 * 24 * 7;
 
         // Calculate the cutoff date
         $cutoffDate = Carbon::now()->subMinutes($lifetime);

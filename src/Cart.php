@@ -43,8 +43,16 @@ final class Cart implements CartInterface
         private readonly StorageInterface $storage
     ) {
         $data = $this->storage->get();
-        $this->items = collect($data['items'] ?? []);
-        $this->conditions = collect($data['conditions'] ?? []);
+        $itemsData = $data['items'] ?? [];
+        $conditionsData = $data['conditions'] ?? [];
+
+        /** @var Collection<string, CartItem> $items */
+        $items = collect(is_array($itemsData) ? $itemsData : []);
+        $this->items = $items;
+
+        /** @var Collection<string, ConditionInterface> $conditions */
+        $conditions = collect(is_array($conditionsData) ? $conditionsData : []);
+        $this->conditions = $conditions;
     }
 
     /**
@@ -66,17 +74,25 @@ final class Cart implements CartInterface
         $cart = new self($storage);
 
         // Convert items to CartItem objects
+        /** @var Collection<string, CartItem> $items */
         $items = collect();
-        foreach ($cartData['items'] ?? [] as $itemId => $item) {
-            if ($item instanceof CartItem) {
-                $items->put($itemId, $item);
-            } else {
-                $items->put($itemId, new CartItem($item));
+        $itemsData = $cartData['items'] ?? [];
+        if (is_array($itemsData)) {
+            foreach ($itemsData as $itemId => $item) {
+                if ($item instanceof CartItem) {
+                    $items->put((string) $itemId, $item);
+                } elseif (is_array($item)) {
+                    /** @var array<string, mixed> $item */
+                    $items->put((string) $itemId, new CartItem($item));
+                }
             }
         }
         $cart->items = $items;
 
-        $cart->conditions = collect($cartData['conditions'] ?? []);
+        $conditionsData = $cartData['conditions'] ?? [];
+        /** @var Collection<string, ConditionInterface> $conditions */
+        $conditions = collect(is_array($conditionsData) ? $conditionsData : []);
+        $cart->conditions = $conditions;
 
         return $cart;
     }
@@ -97,6 +113,8 @@ final class Cart implements CartInterface
     /**
      * Add an item to the cart.
      *
+     * @param  array<string, mixed>|CartItem  $item
+     *
      * @throws CartException
      * @throws PriceException
      */
@@ -104,7 +122,7 @@ final class Cart implements CartInterface
     {
 
         if ($item instanceof CartItem) {
-            $this->items->put($item->id, $item);
+            $this->items->put((string) $item->id, $item);
         } else {
 
             if (! isset($item['id'])) {
@@ -125,7 +143,8 @@ final class Cart implements CartInterface
 
             $cartItem = CartItem::make($item);
 
-            $this->items->put($itemId, $cartItem);
+            $itemIdString = is_string($itemId) || is_int($itemId) ? (string) $itemId : '';
+            $this->items->put($itemIdString, $cartItem);
 
         }
 
@@ -137,6 +156,8 @@ final class Cart implements CartInterface
     /**
      * Update an item in the cart.
      *
+     * @param  array<string, mixed>  $attributes
+     *
      * @throws PriceException
      */
     public function updateItem(string $itemId, array $attributes): self
@@ -146,6 +167,10 @@ final class Cart implements CartInterface
         }
 
         $existingItem = $this->items->get($itemId);
+
+        if ($existingItem === null) {
+            return $this; // Extra safety check
+        }
 
         // Create a new item array with the existing item's properties
         $item = [
@@ -175,7 +200,10 @@ final class Cart implements CartInterface
         }
 
         if (isset($attributes['attributes'])) {
-            $item['attributes'] = fluent($attributes['attributes']);
+            $attributesValue = $attributes['attributes'];
+            if (is_array($attributesValue) || is_object($attributesValue)) {
+                $item['attributes'] = fluent($attributesValue);
+            }
         }
 
         // If the existing item has conditions, add them to the new item
@@ -183,7 +211,7 @@ final class Cart implements CartInterface
             $item['conditions'] = $existingItem->conditions;
         }
 
-        if (isset($attributes['conditions'])) {
+        if (isset($attributes['conditions']) && (is_array($attributes['conditions']) || $attributes['conditions'] instanceof Collection)) {
             $item['conditions'] = $existingItem->conditions->merge($attributes['conditions']);
         }
 
@@ -211,7 +239,9 @@ final class Cart implements CartInterface
      */
     public function clear(): self
     {
-        $this->items = collect();
+        /** @var Collection<string, CartItem> $emptyItems */
+        $emptyItems = collect();
+        $this->items = $emptyItems;
         $this->persist();
 
         return $this;
@@ -222,8 +252,14 @@ final class Cart implements CartInterface
      */
     public function reset(): self
     {
-        $this->items = collect();
-        $this->conditions = collect();
+        /** @var Collection<string, CartItem> $emptyItems */
+        $emptyItems = collect();
+        $this->items = $emptyItems;
+
+        /** @var Collection<string, ConditionInterface> $emptyConditions */
+        $emptyConditions = collect();
+        $this->conditions = $emptyConditions;
+
         $this->persist();
 
         return $this;
@@ -239,6 +275,8 @@ final class Cart implements CartInterface
 
     /**
      * Get all items from the cart.
+     *
+     * @return Collection<string, CartItem>
      */
     public function items(): Collection
     {
@@ -247,6 +285,8 @@ final class Cart implements CartInterface
 
     /**
      * Get all conditions from the cart.
+     *
+     * @return Collection<string, ConditionInterface>
      */
     public function conditions(): Collection
     {
@@ -260,7 +300,7 @@ final class Cart implements CartInterface
      */
     public function count(): int
     {
-        return $this->items->sum(function ($item) {
+        return $this->items->sum(function (CartItem $item): int {
             return $item->quantity;
         });
     }
@@ -295,7 +335,7 @@ final class Cart implements CartInterface
     {
         $subtotalPrice = Price::zero();
 
-        $this->items->each(function ($item) use (&$subtotalPrice): void {
+        $this->items->each(function (CartItem $item) use (&$subtotalPrice): void {
             $itemSubtotal = $item->subtotal();
             $subtotalPrice = $subtotalPrice->plus($itemSubtotal);
         });
@@ -315,7 +355,7 @@ final class Cart implements CartInterface
     {
         $taxableSubtotal = Price::zero();
 
-        $this->items->each(function ($item) use (&$taxableSubtotal): void {
+        $this->items->each(function (CartItem $item) use (&$taxableSubtotal): void {
 
             // check if the item has the taxable attribute
             if ($item->taxable) {
@@ -329,15 +369,21 @@ final class Cart implements CartInterface
     /**
      * Add a global condition to the cart.
      * If a condition with the same name already exists, it will be overwritten.
+     *
+     * @param  array<string, mixed>|ConditionInterface  $condition
      */
     public function addCondition(array | ConditionInterface $condition): self
     {
+        // Convert array to ConditionInterface if needed
+        if (is_array($condition)) {
+            $condition = Condition::make($condition);
+        }
+
         // Check if a condition with the same name already exists
-        /** @phpstan-ignore-next-line */
-        $existingIndex = $this->conditions->search(fn ($item) => $item->name === $condition->name);
+        $existingIndex = $this->conditions->search(fn (ConditionInterface $item): bool => $item->name === $condition->name);
 
         if ($existingIndex !== false) {
-            $this->conditions->put($existingIndex, $condition);
+            $this->conditions->put((string) $existingIndex, $condition);
         } else {
             $this->conditions->push($condition);
         }
@@ -347,6 +393,9 @@ final class Cart implements CartInterface
         return $this;
     }
 
+    /**
+     * @param  array<int, array<string, mixed>|ConditionInterface>  $conditions
+     */
     public function addConditions(array $conditions): self
     {
         foreach ($conditions as $condition) {
@@ -361,7 +410,9 @@ final class Cart implements CartInterface
      */
     public function clearConditions(): self
     {
-        $this->conditions = collect();
+        /** @var Collection<string, ConditionInterface> $emptyConditions */
+        $emptyConditions = collect();
+        $this->conditions = $emptyConditions;
 
         $this->persist();
 
@@ -373,8 +424,13 @@ final class Cart implements CartInterface
      */
     public function removeCondition(string $conditionName): self
     {
-        /** @phpstan-ignore-next-line */
-        $this->conditions = $this->conditions->reject(fn ($condition) => $condition->name === $conditionName)->values();
+        /** @var Collection<int, ConditionInterface> $filtered */
+        $filtered = $this->conditions->reject(fn (ConditionInterface $condition): bool => $condition->name === $conditionName)->values();
+
+        /** @var Collection<string, ConditionInterface> $reindexed */
+        $reindexed = $filtered->mapWithKeys(fn (ConditionInterface $condition, int $key): array => [(string) $key => $condition]);
+
+        $this->conditions = $reindexed;
 
         $this->persist();
 
@@ -389,10 +445,12 @@ final class Cart implements CartInterface
      */
     public function addItemCondition(int | string $itemId, ConditionInterface $condition): self
     {
-        if ($this->items->has($itemId)) {
-            $item = $this->items->get($itemId);
-            $item->addCondition($condition);
-            $this->persist();
+        if ($this->items->has((string) $itemId)) {
+            $item = $this->items->get((string) $itemId);
+            if ($item !== null) {
+                $item->addCondition($condition);
+                $this->persist();
+            }
         }
 
         return $this;
@@ -407,10 +465,12 @@ final class Cart implements CartInterface
      */
     public function removeItemCondition(int | string $itemId, string $conditionName): static
     {
-        if ($this->items->has($itemId)) {
-            $item = $this->items->get($itemId);
-            $item->removeCondition($conditionName);
-            $this->persist();
+        if ($this->items->has((string) $itemId)) {
+            $item = $this->items->get((string) $itemId);
+            if ($item !== null) {
+                $item->removeCondition($conditionName);
+                $this->persist();
+            }
         }
 
         return $this;
@@ -436,23 +496,27 @@ final class Cart implements CartInterface
         $taxableAdjustments = Price::zero(); // Track adjustments from taxable subtotal conditions
 
         // Sort conditions by target priority and type (taxable conditions last)
-        $sortedConditions = $this->conditions->sortBy(function ($condition) {
+        $sortedConditions = $this->conditions->sortBy(function (ConditionInterface $condition): array {
             // Define target priority (lower number = higher priority)
 
+            /** @var array<string, int> */
             $targetPriorities = [
                 ConditionTarget::SUBTOTAL->value => 1, // Apply to subtotal first (before taxes)
                 ConditionTarget::TAXABLE->value  => 2, // Apply to taxable items
             ];
 
+            $targetValue = $condition->target->value;
+            $priority = is_string($targetValue) && isset($targetPriorities[$targetValue]) ? $targetPriorities[$targetValue] : 999;
+
             return [
-                $targetPriorities[$condition->target->value] ?? 999, // Default to end if unknown target
+                $priority, // Default to end if unknown target
                 $condition->taxable ? 2 : 1, // Tax conditions last within each target group
                 $condition->order,
-                -$condition->value, // Negative for descending order by value
+                is_int($condition->value) || is_float($condition->value) ? -$condition->value : 0, // Negative for descending order by value
             ];
         });
 
-        $sortedConditions->each(function ($condition) use (&$total, &$currentTaxableSubtotal, &$taxableAdjustments, $originalSubtotal, $originalTaxableSubtotal, $compoundDiscounts): void {
+        $sortedConditions->each(function (ConditionInterface $condition) use (&$total, &$currentTaxableSubtotal, &$taxableAdjustments, $originalSubtotal, $originalTaxableSubtotal, $compoundDiscounts): void {
 
             // Use original values or current values based on compound_discounts setting
             $baseSubtotal = $compoundDiscounts ? $total : $originalSubtotal;
@@ -512,6 +576,8 @@ final class Cart implements CartInterface
     }
 
     /**
+     * @return array<string, mixed>
+     *
      * @throws PriceException
      * @throws MoneyMismatchException
      * @throws MathException
@@ -525,29 +591,35 @@ final class Cart implements CartInterface
             'total'      => $this->total(),
             'count'      => $this->count(),
             'conditions' => $this->conditions
-                ->map(fn ($condition) => $condition),
+                ->map(fn (ConditionInterface $condition): ConditionInterface => $condition),
         ];
     }
 
     /**
      * Check if the item already exists in the cart and update it accordingly.
      *
-     * @param  array  $item  The item to check and update
-     * @return array The updated item array
+     * @param  array<string, mixed>  $item  The item to check and update
+     * @return array<string, mixed> The updated item array
      */
     private function updateExistingItem(array $item): array
     {
         $itemId = $item['id'];
+        $itemIdString = is_string($itemId) || is_int($itemId) ? (string) $itemId : '';
 
-        if ($this->items->has($itemId)) {
-            $existingItem = $this->items->get($itemId);
+        if ($this->items->has($itemIdString)) {
+            $existingItem = $this->items->get($itemIdString);
 
-            $item['quantity'] = ($item['quantity'] ?? 1) + $existingItem->quantity;
+            if ($existingItem === null) {
+                return $item;
+            }
+
+            $currentQuantity = $item['quantity'] ?? 1;
+            $item['quantity'] = (is_int($currentQuantity) || is_float($currentQuantity) ? (int) $currentQuantity : 1) + $existingItem->quantity;
 
             $item['taxable'] ??= $existingItem->taxable;
 
             // If existing item has attributes, merge with new ones if provided
-            if (isset($item['attributes'])) {
+            if (isset($item['attributes']) && is_array($item['attributes'])) {
                 $mergedAttributes = array_merge($existingItem->attributes->toArray(), $item['attributes']);
                 $item['attributes'] = $mergedAttributes;
             } else {

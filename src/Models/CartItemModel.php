@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $name
  * @property float $price
  * @property int $quantity
- * @property array $attributes
- * @property array $conditions
+ * @property array<string, mixed> $attributes
+ * @property array<int, mixed> $conditions
  */
 final class CartItemModel extends Model
 {
@@ -30,6 +30,9 @@ final class CartItemModel extends Model
         'conditions',
     ];
 
+    /**
+     * @return BelongsTo<CartModel, $this>
+     */
     public function cart(): BelongsTo
     {
         return $this->belongsTo(CartModel::class, 'cart_id');
