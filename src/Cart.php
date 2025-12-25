@@ -73,11 +73,11 @@ final class Cart implements CartInterface
         $rulesData = $data['rules'] ?? [];
 
         /** @var Collection<string, CartItem> $items */
-        $items = collect(is_array($itemsData) ? $itemsData : []);
+        $items = $itemsData instanceof Collection ? $itemsData : collect(is_array($itemsData) ? $itemsData : []);
         $this->items = $items;
 
         /** @var Collection<string, ConditionInterface> $conditions */
-        $conditions = collect(is_array($conditionsData) ? $conditionsData : []);
+        $conditions = $conditionsData instanceof Collection ? $conditionsData : collect(is_array($conditionsData) ? $conditionsData : []);
         $this->conditions = $conditions;
 
         /** @var Collection<string, RuleInterface> $rules */
@@ -765,7 +765,7 @@ final class Cart implements CartInterface
      * @throws CartException
      * @throws PriceException
      */
-    public function mergeFrom(Cart|string $source, string|MergeStrategyInterface|null $strategy = null): self
+    public function mergeFrom(Cart | string $source, string | MergeStrategyInterface | null $strategy = null): self
     {
         // Resolve source cart
         $sourceCart = $source instanceof Cart ? $source : self::getCartById($source);

@@ -62,7 +62,8 @@ final readonly class SessionStorage implements StorageInterface
         }
 
         // If the data is already in the new format, return it
-        if (isset($data['items']) && is_array($data['items'])) {
+        // Check for array OR Collection since session deserialization preserves Collection objects
+        if (isset($data['items']) && (is_array($data['items']) || $data['items'] instanceof \Illuminate\Support\Collection)) {
             /** @var array<string, mixed> */
             return $data;
         }
