@@ -312,11 +312,7 @@ composer test
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
 
 ## Future Roadmap
-
-- Built-in coupon code support
-- Advanced reporting and analytics
-- REST API endpoints
-
+- API endpoints
 
 ## Contributing
 
