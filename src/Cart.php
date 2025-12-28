@@ -10,12 +10,30 @@ use Brick\Money\Exception\MoneyMismatchException;
 use Brick\Money\Exception\UnknownCurrencyException;
 use Daikazu\Flexicart\Conditions\Condition;
 use Daikazu\Flexicart\Conditions\Contracts\ConditionInterface;
+use Daikazu\Flexicart\Conditions\Rules\RuleInterface;
 use Daikazu\Flexicart\Contracts\CartInterface;
 use Daikazu\Flexicart\Contracts\StorageInterface;
 use Daikazu\Flexicart\Enums\ConditionTarget;
 use Daikazu\Flexicart\Enums\ConditionType;
+use Daikazu\Flexicart\Events\CartCleared;
+use Daikazu\Flexicart\Events\CartMerged;
+use Daikazu\Flexicart\Events\CartReset;
+use Daikazu\Flexicart\Events\ConditionAdded;
+use Daikazu\Flexicart\Events\ConditionRemoved;
+use Daikazu\Flexicart\Events\ConditionsCleared;
+use Daikazu\Flexicart\Events\ItemAdded;
+use Daikazu\Flexicart\Events\ItemConditionAdded;
+use Daikazu\Flexicart\Events\ItemConditionRemoved;
+use Daikazu\Flexicart\Events\ItemQuantityUpdated;
+use Daikazu\Flexicart\Events\ItemRemoved;
+use Daikazu\Flexicart\Events\ItemUpdated;
+use Daikazu\Flexicart\Events\RuleAdded;
+use Daikazu\Flexicart\Events\RuleRemoved;
+use Daikazu\Flexicart\Events\RulesCleared;
 use Daikazu\Flexicart\Exceptions\CartException;
 use Daikazu\Flexicart\Exceptions\PriceException;
+use Daikazu\Flexicart\Strategies\MergeStrategyFactory;
+use Daikazu\Flexicart\Strategies\MergeStrategyInterface;
 use Illuminate\Support\Collection;
 
 final class Cart implements CartInterface
@@ -35,6 +53,13 @@ final class Cart implements CartInterface
     public Collection $conditions;
 
     /**
+     * The cart rules (advanced conditions with cart context).
+     *
+     * @var Collection<string, RuleInterface>
+     */
+    public Collection $rules;
+
+    /**
      * Create a new cart instance.
      */
     public function __construct(/**
@@ -45,14 +70,19 @@ final class Cart implements CartInterface
         $data = $this->storage->get();
         $itemsData = $data['items'] ?? [];
         $conditionsData = $data['conditions'] ?? [];
+        $rulesData = $data['rules'] ?? [];
 
         /** @var Collection<string, CartItem> $items */
-        $items = collect(is_array($itemsData) ? $itemsData : []);
+        $items = $itemsData instanceof Collection ? $itemsData : collect(is_array($itemsData) ? $itemsData : []);
         $this->items = $items;
 
         /** @var Collection<string, ConditionInterface> $conditions */
-        $conditions = collect(is_array($conditionsData) ? $conditionsData : []);
+        $conditions = $conditionsData instanceof Collection ? $conditionsData : collect(is_array($conditionsData) ? $conditionsData : []);
         $this->conditions = $conditions;
+
+        /** @var Collection<string, RuleInterface> $rules */
+        $rules = $rulesData instanceof Collection ? $rulesData : collect(is_array($rulesData) ? $rulesData : []);
+        $this->rules = $rules;
     }
 
     /**
@@ -120,11 +150,19 @@ final class Cart implements CartInterface
      */
     public function addItem(array | CartItem $item): self
     {
-
         if ($item instanceof CartItem) {
-            $this->items->put((string) $item->id, $item);
-        } else {
+            $existingItem = $this->items->get((string) $item->id);
+            $oldQuantity = $existingItem?->quantity;
 
+            $this->items->put((string) $item->id, $item);
+            $this->persist();
+
+            if ($oldQuantity !== null) {
+                $this->dispatchEvent(new ItemQuantityUpdated($this->id(), $item, $oldQuantity, $item->quantity));
+            } else {
+                $this->dispatchEvent(new ItemAdded($this->id(), $item));
+            }
+        } else {
             if (! isset($item['id'])) {
                 throw new CartException('Item ID is required');
             }
@@ -138,17 +176,23 @@ final class Cart implements CartInterface
             }
 
             $itemId = $item['id'];
+            $itemIdString = is_string($itemId) || is_int($itemId) ? (string) $itemId : '';
+
+            $existingItem = $this->items->get($itemIdString);
+            $oldQuantity = $existingItem?->quantity;
 
             $item = $this->updateExistingItem($item);
-
             $cartItem = CartItem::make($item);
 
-            $itemIdString = is_string($itemId) || is_int($itemId) ? (string) $itemId : '';
             $this->items->put($itemIdString, $cartItem);
+            $this->persist();
 
+            if ($oldQuantity !== null) {
+                $this->dispatchEvent(new ItemQuantityUpdated($this->id(), $cartItem, $oldQuantity, $cartItem->quantity));
+            } else {
+                $this->dispatchEvent(new ItemAdded($this->id(), $cartItem));
+            }
         }
-
-        $this->persist();
 
         return $this;
     }
@@ -220,6 +264,8 @@ final class Cart implements CartInterface
 
         $this->persist();
 
+        $this->dispatchEvent(new ItemUpdated($this->id(), $cartItem, $attributes));
+
         return $this;
     }
 
@@ -228,8 +274,14 @@ final class Cart implements CartInterface
      */
     public function removeItem(string $itemId): self
     {
+        $item = $this->items->get($itemId);
+
         $this->items->forget($itemId);
         $this->persist();
+
+        if ($item !== null) {
+            $this->dispatchEvent(new ItemRemoved($this->id(), $item));
+        }
 
         return $this;
     }
@@ -239,19 +291,29 @@ final class Cart implements CartInterface
      */
     public function clear(): self
     {
+        $clearedItems = $this->items;
+
         /** @var Collection<string, CartItem> $emptyItems */
         $emptyItems = collect();
         $this->items = $emptyItems;
         $this->persist();
 
+        if ($clearedItems->isNotEmpty()) {
+            $this->dispatchEvent(new CartCleared($this->id(), $clearedItems));
+        }
+
         return $this;
     }
 
     /**
-     * Clear all items from the cart.
+     * Clear all items, conditions, and rules from the cart.
      */
     public function reset(): self
     {
+        $clearedItems = $this->items;
+        $clearedConditions = $this->conditions;
+        $clearedRules = $this->rules;
+
         /** @var Collection<string, CartItem> $emptyItems */
         $emptyItems = collect();
         $this->items = $emptyItems;
@@ -260,7 +322,19 @@ final class Cart implements CartInterface
         $emptyConditions = collect();
         $this->conditions = $emptyConditions;
 
+        /** @var Collection<string, RuleInterface> $emptyRules */
+        $emptyRules = collect();
+        $this->rules = $emptyRules;
+
         $this->persist();
+
+        if ($clearedItems->isNotEmpty() || $clearedConditions->isNotEmpty()) {
+            $this->dispatchEvent(new CartReset($this->id(), $clearedItems, $clearedConditions));
+        }
+
+        if ($clearedRules->isNotEmpty()) {
+            $this->dispatchEvent(new RulesCleared($this->id(), $clearedRules));
+        }
 
         return $this;
     }
@@ -379,14 +453,17 @@ final class Cart implements CartInterface
 
         // Check if a condition with the same name already exists
         $existingIndex = $this->conditions->search(fn (ConditionInterface $item): bool => $item->name === $condition->name);
+        $replaced = $existingIndex !== false;
 
-        if ($existingIndex !== false) {
+        if ($replaced) {
             $this->conditions->put((string) $existingIndex, $condition);
         } else {
             $this->conditions->push($condition);
         }
 
         $this->persist();
+
+        $this->dispatchEvent(new ConditionAdded($this->id(), $condition, $replaced));
 
         return $this;
     }
@@ -408,11 +485,17 @@ final class Cart implements CartInterface
      */
     public function clearConditions(): self
     {
+        $clearedConditions = $this->conditions;
+
         /** @var Collection<string, ConditionInterface> $emptyConditions */
         $emptyConditions = collect();
         $this->conditions = $emptyConditions;
 
         $this->persist();
+
+        if ($clearedConditions->isNotEmpty()) {
+            $this->dispatchEvent(new ConditionsCleared($this->id(), $clearedConditions));
+        }
 
         return $this;
     }
@@ -422,6 +505,8 @@ final class Cart implements CartInterface
      */
     public function removeCondition(string $conditionName): self
     {
+        $removedCondition = $this->conditions->first(fn (ConditionInterface $condition): bool => $condition->name === $conditionName);
+
         /** @var Collection<int, ConditionInterface> $filtered */
         $filtered = $this->conditions->reject(fn (ConditionInterface $condition): bool => $condition->name === $conditionName)->values();
 
@@ -431,6 +516,10 @@ final class Cart implements CartInterface
         $this->conditions = $reindexed;
 
         $this->persist();
+
+        if ($removedCondition !== null) {
+            $this->dispatchEvent(new ConditionRemoved($this->id(), $removedCondition));
+        }
 
         return $this;
     }
@@ -448,6 +537,7 @@ final class Cart implements CartInterface
             if ($item !== null) {
                 $item->addCondition($condition);
                 $this->persist();
+                $this->dispatchEvent(new ItemConditionAdded($this->id(), $item, $condition));
             }
         }
 
@@ -468,6 +558,7 @@ final class Cart implements CartInterface
             if ($item !== null) {
                 $item->removeCondition($conditionName);
                 $this->persist();
+                $this->dispatchEvent(new ItemConditionRemoved($this->id(), $item, $conditionName));
             }
         }
 
@@ -475,7 +566,67 @@ final class Cart implements CartInterface
     }
 
     /**
-     * Calculate the cart total (subtotal + cart conditions).
+     * Add a rule to the cart.
+     */
+    public function addRule(RuleInterface $rule): self
+    {
+        $replaced = $this->rules->has($rule->getName());
+        $this->rules->put($rule->getName(), $rule);
+        $this->persist();
+        $this->dispatchEvent(new RuleAdded($this->id(), $rule, $replaced));
+
+        return $this;
+    }
+
+    /**
+     * Get all rules from the cart.
+     *
+     * @return Collection<string, RuleInterface>
+     */
+    public function rules(): Collection
+    {
+        return $this->rules;
+    }
+
+    /**
+     * Remove a specific rule by name.
+     */
+    public function removeRule(string $ruleName): self
+    {
+        $removedRule = $this->rules->get($ruleName);
+
+        $this->rules->forget($ruleName);
+        $this->persist();
+
+        if ($removedRule !== null) {
+            $this->dispatchEvent(new RuleRemoved($this->id(), $removedRule));
+        }
+
+        return $this;
+    }
+
+    /**
+     * Clear all rules from the cart.
+     */
+    public function clearRules(): self
+    {
+        $clearedRules = $this->rules;
+
+        /** @var Collection<string, RuleInterface> $emptyRules */
+        $emptyRules = collect();
+        $this->rules = $emptyRules;
+
+        $this->persist();
+
+        if ($clearedRules->isNotEmpty()) {
+            $this->dispatchEvent(new RulesCleared($this->id(), $clearedRules));
+        }
+
+        return $this;
+    }
+
+    /**
+     * Calculate the cart total (subtotal + cart conditions + rules).
      *
      * @throws PriceException
      * @throws UnknownCurrencyException
@@ -564,6 +715,18 @@ final class Cart implements CartInterface
             }
         });
 
+        // Apply rules (advanced conditions with cart context)
+        $this->rules->each(function (RuleInterface $rule) use (&$total, $subtotal): void {
+            // Set cart context for the rule
+            $rule->setCartContext($this->items, $subtotal);
+
+            // Only apply if the rule applies to current cart state
+            if ($rule->applies()) {
+                $discount = $rule->getDiscount();
+                $total = $total->plus($discount);
+            }
+        });
+
         // Ensure total is never negative
         if ($total->toFloat() < 0) {
             return new Price(0);
@@ -591,6 +754,78 @@ final class Cart implements CartInterface
             'conditions' => $this->conditions
                 ->map(fn (ConditionInterface $condition): ConditionInterface => $condition),
         ];
+    }
+
+    /**
+     * Merge another cart into this cart.
+     *
+     * @param  Cart|string  $source  The source cart or cart ID to merge from
+     * @param  string|MergeStrategyInterface|null  $strategy  The merge strategy to use (default from config)
+     *
+     * @throws CartException
+     * @throws PriceException
+     */
+    public function mergeFrom(Cart | string $source, string | MergeStrategyInterface | null $strategy = null): self
+    {
+        // Resolve source cart
+        $sourceCart = $source instanceof Cart ? $source : self::getCartById($source);
+
+        if ($sourceCart === null) {
+            throw new CartException('Source cart not found');
+        }
+
+        // Don't merge a cart into itself
+        if ($sourceCart->id() === $this->id()) {
+            return $this;
+        }
+
+        // Resolve strategy
+        if ($strategy === null) {
+            $strategy = MergeStrategyFactory::default();
+        } elseif (is_string($strategy)) {
+            $strategy = MergeStrategyFactory::make($strategy);
+        }
+
+        /** @var Collection<string, CartItem> $mergedItems */
+        $mergedItems = collect();
+
+        // Merge items
+        foreach ($sourceCart->items() as $sourceItem) {
+            $itemId = (string) $sourceItem->id;
+            $existingItem = $this->items->get($itemId);
+
+            if ($existingItem !== null) {
+                // Item exists in both carts - merge using strategy
+                $mergedData = $strategy->mergeItem($existingItem, $sourceItem);
+            } else {
+                // New item - add it
+                $mergedData = $strategy->handleNewItem($sourceItem);
+            }
+
+            $cartItem = new CartItem($mergedData);
+            $this->items->put($itemId, $cartItem);
+            $mergedItems->put($itemId, $cartItem);
+        }
+
+        // Merge conditions using strategy
+        $this->conditions = $strategy->mergeConditions($this->conditions, $sourceCart->conditions());
+
+        $this->persist();
+
+        // Dispatch event
+        $this->dispatchEvent(new CartMerged(
+            $this->id(),
+            $sourceCart->id(),
+            $mergedItems,
+            $strategy->name()
+        ));
+
+        // Delete source cart if configured
+        if (config('flexicart.merge.delete_source', true)) {
+            $sourceCart->reset();
+        }
+
+        return $this;
     }
 
     /**
@@ -641,6 +876,17 @@ final class Cart implements CartInterface
         $this->storage->put([
             'items'      => $this->items,
             'conditions' => $this->conditions,
+            'rules'      => $this->rules,
         ]);
+    }
+
+    /**
+     * Dispatch an event if events are enabled.
+     */
+    private function dispatchEvent(object $event): void
+    {
+        if (config('flexicart.events.enabled', true)) {
+            event($event);
+        }
     }
 }

@@ -93,4 +93,38 @@ return [
         'lifetime' => 60 * 24 * 7, // 1 week by default
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cart Events
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, the cart will dispatch Laravel events for various actions
+    | such as adding items, removing items, clearing the cart, etc. This allows
+    | you to hook into cart actions for analytics, inventory management, etc.
+    |
+    */
+    'events' => [
+        'enabled' => env('CART_EVENTS_ENABLED', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cart Merging
+    |--------------------------------------------------------------------------
+    |
+    | These settings control how carts are merged when using the mergeFrom()
+    | method. This is useful for merging guest carts with user carts on login.
+    |
+    | Strategies:
+    |   - 'sum': Add quantities together, source attributes win, combine conditions
+    |   - 'replace': Source completely replaces target
+    |   - 'max': Keep highest quantity, source attributes win, combine conditions
+    |   - 'keep_target': Keep target values, only add items that don't exist
+    |
+    */
+    'merge' => [
+        'default_strategy' => env('CART_MERGE_STRATEGY', 'sum'),
+        'delete_source' => env('CART_MERGE_DELETE_SOURCE', true),
+    ],
+
 ];

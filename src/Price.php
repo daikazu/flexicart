@@ -197,6 +197,14 @@ final class Price implements Stringable
         return $this->money->formatTo($this->locale);
     }
 
+    /**
+     * Alias for formatted() method
+     */
+    public function format(): string
+    {
+        return $this->formatted();
+    }
+
     public function toFloat(): float
     {
         return $this->money->getAmount()->toFloat();
