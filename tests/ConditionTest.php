@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Daikazu\Flexicart\Conditions\Condition;
 use Daikazu\Flexicart\Conditions\Types\FixedCondition;
 use Daikazu\Flexicart\Conditions\Types\FixedTaxCondition;
 use Daikazu\Flexicart\Conditions\Types\PercentageCondition;
@@ -494,6 +495,113 @@ describe('Conditions', function (): void {
             $condition = new PercentageTaxCondition('Test', 10.0, ConditionTarget::ITEM);
 
             expect($condition->target)->toBe(ConditionTarget::TAXABLE);
+        });
+    });
+
+    describe('Condition::fromArray()', function (): void {
+        test('reconstructs FixedCondition with subtotal target', function (): void {
+            $original = new FixedCondition('Shipping', 5.00, ConditionTarget::SUBTOTAL, ['note' => 'flat rate'], 2, true);
+            $restored = Condition::fromArray($original->toArray());
+
+            expect($restored)->toBeInstanceOf(FixedCondition::class)
+                ->and($restored->name)->toBe('Shipping')
+                ->and($restored->value)->toBe(5.00)
+                ->and($restored->type)->toBe(ConditionType::FIXED)
+                ->and($restored->target)->toBe(ConditionTarget::SUBTOTAL)
+                ->and($restored->order)->toBe(2)
+                ->and($restored->taxable)->toBeTrue()
+                ->and($restored->attributes->toArray())->toBe(['note' => 'flat rate']);
+        });
+
+        test('reconstructs FixedCondition with item target', function (): void {
+            $restored = Condition::fromArray([
+                'name' => 'Item Add-on', 'value' => 3.00, 'type' => 'fixed',
+                'target' => 'item', 'order' => 0, 'taxable' => false, 'attributes' => [],
+            ]);
+
+            expect($restored)->toBeInstanceOf(FixedCondition::class)
+                ->and($restored->target)->toBe(ConditionTarget::ITEM);
+        });
+
+        test('reconstructs PercentageCondition', function (): void {
+            $original = new PercentageCondition('Sale', -15.5, ConditionTarget::ITEM);
+            $restored = Condition::fromArray($original->toArray());
+
+            expect($restored)->toBeInstanceOf(PercentageCondition::class)
+                ->and($restored->name)->toBe('Sale')
+                ->and($restored->value)->toBe(-15.5)
+                ->and($restored->type)->toBe(ConditionType::PERCENTAGE)
+                ->and($restored->target)->toBe(ConditionTarget::ITEM);
+        });
+
+        test('reconstructs FixedTaxCondition from taxable target + fixed type', function (): void {
+            $restored = Condition::fromArray([
+                'name' => 'Flat Tax', 'value' => 2.00, 'type' => 'fixed',
+                'target' => 'taxable', 'order' => 0, 'taxable' => false, 'attributes' => [],
+            ]);
+
+            expect($restored)->toBeInstanceOf(FixedTaxCondition::class)
+                ->and($restored->target)->toBe(ConditionTarget::TAXABLE);
+        });
+
+        test('reconstructs PercentageTaxCondition from taxable target + percentage type', function (): void {
+            $original = new PercentageTaxCondition('Sales Tax', 8.25);
+            $restored = Condition::fromArray($original->toArray());
+
+            expect($restored)->toBeInstanceOf(PercentageTaxCondition::class)
+                ->and($restored->name)->toBe('Sales Tax')
+                ->and($restored->value)->toBe(8.25)
+                ->and($restored->type)->toBe(ConditionType::PERCENTAGE)
+                ->and($restored->target)->toBe(ConditionTarget::TAXABLE);
+        });
+
+        test('restored conditions are functional (calculate works)', function (): void {
+            $percentData = (new PercentageCondition('10% off', -10, ConditionTarget::SUBTOTAL))->toArray();
+            $fixedData = (new FixedCondition('Shipping', 5.00, ConditionTarget::SUBTOTAL))->toArray();
+
+            $percent = Condition::fromArray($percentData);
+            $fixed = Condition::fromArray($fixedData);
+
+            expect($percent->calculate(new Price(100.00))->toFloat())->toBe(-10.00)
+                ->and($fixed->calculate()->toFloat())->toBe(5.00);
+        });
+
+        test('defaults target to SUBTOTAL when target is missing', function (): void {
+            $restored = Condition::fromArray([
+                'name' => 'No Target', 'value' => 5.00, 'type' => 'fixed',
+            ]);
+
+            expect($restored)->toBeInstanceOf(FixedCondition::class)
+                ->and($restored->target)->toBe(ConditionTarget::SUBTOTAL);
+        });
+
+        test('throws exception when type is missing', function (): void {
+            expect(fn () => Condition::fromArray(['name' => 'Bad', 'value' => 5]))
+                ->toThrow(InvalidArgumentException::class, 'Condition array must contain a string "type" field.');
+        });
+
+        test('throws exception for unknown type', function (): void {
+            expect(fn () => Condition::fromArray(['name' => 'Bad', 'value' => 5, 'type' => 'unknown']))
+                ->toThrow(InvalidArgumentException::class, 'Unknown condition type: unknown');
+        });
+
+        test('round-trips all four condition types through toArray/fromArray', function (): void {
+            $conditions = [
+                new FixedCondition('Fixed', 10.00, ConditionTarget::SUBTOTAL),
+                new PercentageCondition('Percent', -20, ConditionTarget::ITEM),
+                new FixedTaxCondition('FixedTax', 3.00, ConditionTarget::TAXABLE),
+                new PercentageTaxCondition('PercentTax', 8.25),
+            ];
+
+            foreach ($conditions as $original) {
+                $restored = Condition::fromArray($original->toArray());
+
+                expect($restored)->toBeInstanceOf($original::class)
+                    ->and($restored->name)->toBe($original->name)
+                    ->and($restored->value)->toBe($original->value)
+                    ->and($restored->type)->toBe($original->type)
+                    ->and($restored->target)->toBe($original->target);
+            }
         });
     });
 

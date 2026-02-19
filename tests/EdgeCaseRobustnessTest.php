@@ -303,12 +303,13 @@ describe('Database Serialization', function (): void {
         $retrievedItem = $cartData['items']['item1'];
         expect($retrievedItem['conditions'])->toHaveCount(1);
 
-        // Conditions are returned as arrays, not objects
+        // Conditions are returned as hydrated objects
         $retrievedCondition = $retrievedItem['conditions'][0];
         // Note: JSON serialization may convert -10.00 to int -10, so use toEqual for loose comparison
-        expect($retrievedCondition['name'])->toBe('Test Discount')
-            ->and($retrievedCondition['value'])->toEqual(-10.00)
-            ->and($retrievedCondition['target'])->toBe(ConditionTarget::SUBTOTAL->value);
+        expect($retrievedCondition)->toBeInstanceOf(FixedCondition::class)
+            ->and($retrievedCondition->name)->toBe('Test Discount')
+            ->and($retrievedCondition->value)->toEqual(-10.00)
+            ->and($retrievedCondition->target)->toBe(ConditionTarget::SUBTOTAL);
     });
 
     test('percentage condition survives database round-trip', function (): void {
@@ -331,9 +332,10 @@ describe('Database Serialization', function (): void {
         $retrievedItem = $cartData['items']['item2'];
         $retrievedCondition = $retrievedItem['conditions'][0];
 
-        expect($retrievedCondition['name'])->toBe('Test Percent')
-            ->and($retrievedCondition['value'])->toBe(-15.5)
-            ->and($retrievedCondition['target'])->toBe(ConditionTarget::ITEM->value);
+        expect($retrievedCondition)->toBeInstanceOf(PercentageCondition::class)
+            ->and($retrievedCondition->name)->toBe('Test Percent')
+            ->and($retrievedCondition->value)->toBe(-15.5)
+            ->and($retrievedCondition->target)->toBe(ConditionTarget::ITEM);
     });
 
     test('multiple conditions survive database round-trip', function (): void {
@@ -359,7 +361,7 @@ describe('Database Serialization', function (): void {
         $retrievedItem = $cartData['items']['item3'];
         expect($retrievedItem['conditions'])->toHaveCount(2);
 
-        $names = array_column($retrievedItem['conditions'], 'name');
+        $names = array_map(fn ($c) => $c->name, $retrievedItem['conditions']);
         expect($names)->toContain('Fixed')
             ->and($names)->toContain('Percent');
     });
@@ -382,7 +384,8 @@ describe('Database Serialization', function (): void {
         $cartData = $storage->getCartById((string) $cart->id);
 
         $retrievedCondition = $cartData['items']['item4']['conditions'][0];
-        expect($retrievedCondition['order'])->toBe(5);
+        expect($retrievedCondition)->toBeInstanceOf(FixedCondition::class)
+            ->and($retrievedCondition->order)->toBe(5);
     });
 
     test('cart-level conditions survive database round-trip', function (): void {
@@ -408,11 +411,12 @@ describe('Database Serialization', function (): void {
 
         expect($cartData['conditions'])->toHaveCount(1);
 
-        // Cart conditions are also returned as arrays
+        // Cart conditions are returned as hydrated objects
         // Note: JSON serialization may convert -20.0 to int -20, so use toEqual for loose comparison
         $retrievedCondition = $cartData['conditions'][0];
-        expect($retrievedCondition['name'])->toBe('Cart Discount')
-            ->and($retrievedCondition['value'])->toEqual(-20.0);
+        expect($retrievedCondition)->toBeInstanceOf(PercentageCondition::class)
+            ->and($retrievedCondition->name)->toBe('Cart Discount')
+            ->and($retrievedCondition->value)->toEqual(-20.0);
     });
 });
 

@@ -2,7 +2,14 @@
 
 declare(strict_types=1);
 
+use Daikazu\Flexicart\Cart;
+use Daikazu\Flexicart\CartItem;
 use Daikazu\Flexicart\Conditions\Condition;
+use Daikazu\Flexicart\Conditions\Contracts\ConditionInterface;
+use Daikazu\Flexicart\Conditions\Types\FixedCondition;
+use Daikazu\Flexicart\Conditions\Types\PercentageCondition;
+use Daikazu\Flexicart\Conditions\Types\PercentageTaxCondition;
+use Daikazu\Flexicart\Enums\ConditionTarget;
 use Daikazu\Flexicart\Models\CartItemModel;
 use Daikazu\Flexicart\Models\CartModel;
 use Daikazu\Flexicart\Price;
@@ -174,8 +181,10 @@ describe('DatabaseStorage', function (): void {
                 ->and($retrievedCart['items']['item1']['quantity'])->toBe(3)
                 ->and($retrievedCart['items']['item1']['attributes'])->toBe(['size' => 'large'])
                 ->and($retrievedCart['items']['item1']['conditions'])->toHaveCount(1)
+                ->and($retrievedCart['items']['item1']['conditions'][0])->toBeInstanceOf(ConditionInterface::class)
                 ->and($retrievedCart['conditions'])->toHaveCount(1)
-                ->and($retrievedCart['conditions'][0]['name'])->toBe('shipping');
+                ->and($retrievedCart['conditions'][0])->toBeInstanceOf(ConditionInterface::class)
+                ->and($retrievedCart['conditions'][0]->name)->toBe('shipping');
 
         });
 
@@ -192,7 +201,9 @@ describe('DatabaseStorage', function (): void {
             $retrievedCart = $storage->get();
 
             expect($retrievedCart['conditions'])->toBeArray()
-                ->and($retrievedCart['conditions'])->toHaveCount(1);
+                ->and($retrievedCart['conditions'])->toHaveCount(1)
+                ->and($retrievedCart['conditions'][0])->toBeInstanceOf(ConditionInterface::class)
+                ->and($retrievedCart['conditions'][0]->name)->toBe('discount');
         });
 
         test('get handles Condition objects correctly', function (): void {
@@ -564,6 +575,132 @@ describe('DatabaseStorage', function (): void {
         });
     });
 
+    describe('Condition Hydration', function (): void {
+        test('get returns hydrated ConditionInterface objects for item conditions', function (): void {
+            $cartModel = new CartModel;
+            $storage = new DatabaseStorage($cartModel);
+            $cartId = (int) $storage->getCartId();
+
+            CartItemModel::create([
+                'cart_id'    => $cartId,
+                'item_id'    => 'item1',
+                'name'       => 'Test Item',
+                'price'      => 20.00,
+                'quantity'   => 1,
+                'attributes' => [],
+                'conditions' => [
+                    ['name' => 'item discount', 'type' => 'percentage', 'value' => -10, 'target' => 'item', 'order' => 0, 'taxable' => false, 'attributes' => []],
+                    ['name' => 'surcharge', 'type' => 'fixed', 'value' => 5, 'target' => 'subtotal', 'order' => 1, 'taxable' => false, 'attributes' => []],
+                ],
+            ]);
+
+            $cart = $storage->get();
+
+            expect($cart['items']['item1']['conditions'])->toHaveCount(2)
+                ->and($cart['items']['item1']['conditions'][0])->toBeInstanceOf(PercentageCondition::class)
+                ->and($cart['items']['item1']['conditions'][0]->name)->toBe('item discount')
+                ->and($cart['items']['item1']['conditions'][0]->value)->toBe(-10)
+                ->and($cart['items']['item1']['conditions'][0]->target)->toBe(ConditionTarget::ITEM)
+                ->and($cart['items']['item1']['conditions'][1])->toBeInstanceOf(FixedCondition::class)
+                ->and($cart['items']['item1']['conditions'][1]->name)->toBe('surcharge');
+        });
+
+        test('get returns hydrated ConditionInterface objects for global conditions', function (): void {
+            $cartModel = new CartModel;
+            $storage = new DatabaseStorage($cartModel);
+            $cartId = (int) $storage->getCartId();
+
+            $cart = CartModel::find($cartId);
+            $cart->conditions = [
+                ['name' => 'shipping', 'type' => 'fixed', 'value' => 5, 'target' => 'subtotal', 'order' => 0, 'taxable' => false, 'attributes' => []],
+                ['name' => 'sales tax', 'type' => 'percentage', 'value' => 8.25, 'target' => 'taxable', 'order' => 1, 'taxable' => true, 'attributes' => []],
+            ];
+            $cart->save();
+
+            $retrievedCart = $storage->get();
+
+            expect($retrievedCart['conditions'])->toHaveCount(2)
+                ->and($retrievedCart['conditions'][0])->toBeInstanceOf(FixedCondition::class)
+                ->and($retrievedCart['conditions'][0]->name)->toBe('shipping')
+                ->and($retrievedCart['conditions'][0]->target)->toBe(ConditionTarget::SUBTOTAL)
+                ->and($retrievedCart['conditions'][1])->toBeInstanceOf(PercentageTaxCondition::class)
+                ->and($retrievedCart['conditions'][1]->name)->toBe('sales tax')
+                ->and($retrievedCart['conditions'][1]->target)->toBe(ConditionTarget::TAXABLE)
+                ->and($retrievedCart['conditions'][1]->taxable)->toBeTrue();
+        });
+
+        test('getCartById returns hydrated ConditionInterface objects', function (): void {
+            $cart = CartModel::create(['session_id' => 'hydration_test']);
+            CartItemModel::create([
+                'cart_id'    => $cart->id,
+                'item_id'    => 'item1',
+                'name'       => 'Test Item',
+                'price'      => 10.00,
+                'quantity'   => 1,
+                'attributes' => [],
+                'conditions' => [
+                    ['name' => 'discount', 'type' => 'percentage', 'value' => -15, 'target' => 'item', 'order' => 0, 'taxable' => false, 'attributes' => []],
+                ],
+            ]);
+            $cart->conditions = [
+                ['name' => 'flat fee', 'type' => 'fixed', 'value' => 3, 'target' => 'subtotal', 'order' => 0, 'taxable' => false, 'attributes' => []],
+            ];
+            $cart->save();
+
+            $storage = new DatabaseStorage(new CartModel);
+            $retrievedCart = $storage->getCartById((string) $cart->id);
+
+            expect($retrievedCart['items']['item1']['conditions'][0])->toBeInstanceOf(PercentageCondition::class)
+                ->and($retrievedCart['items']['item1']['conditions'][0]->name)->toBe('discount')
+                ->and($retrievedCart['conditions'][0])->toBeInstanceOf(FixedCondition::class)
+                ->and($retrievedCart['conditions'][0]->name)->toBe('flat fee');
+        });
+
+        test('round-trip: conditions survive put then get', function (): void {
+            $cartModel = new CartModel;
+            $storage = new DatabaseStorage($cartModel);
+
+            $discount = PercentageCondition::make([
+                'name' => 'sale',
+                'value' => -20,
+                'target' => ConditionTarget::SUBTOTAL,
+            ]);
+            $shipping = FixedCondition::make([
+                'name' => 'shipping',
+                'value' => 7.50,
+                'target' => ConditionTarget::SUBTOTAL,
+            ]);
+
+            $cartData = [
+                'items' => [
+                    'item1' => [
+                        'name'       => 'Widget',
+                        'price'      => new Price(25.00),
+                        'quantity'   => 2,
+                        'attributes' => [],
+                        'conditions' => [$discount],
+                    ],
+                ],
+                'conditions' => [$shipping],
+            ];
+
+            $storage->put($cartData);
+            $retrieved = $storage->get();
+
+            // Item conditions are hydrated
+            expect($retrieved['items']['item1']['conditions'])->toHaveCount(1)
+                ->and($retrieved['items']['item1']['conditions'][0])->toBeInstanceOf(PercentageCondition::class)
+                ->and($retrieved['items']['item1']['conditions'][0]->name)->toBe('sale')
+                ->and($retrieved['items']['item1']['conditions'][0]->value)->toEqual(-20.0);
+
+            // Global conditions are hydrated
+            expect($retrieved['conditions'])->toHaveCount(1)
+                ->and($retrieved['conditions'][0])->toBeInstanceOf(FixedCondition::class)
+                ->and($retrieved['conditions'][0]->name)->toBe('shipping')
+                ->and($retrieved['conditions'][0]->value)->toBe(7.50);
+        });
+    });
+
     describe('Edge Cases and Error Handling', function (): void {
         test('handles empty cart data gracefully', function (): void {
             $cartModel = new CartModel;
@@ -675,6 +812,84 @@ describe('DatabaseStorage', function (): void {
             $retrievedCart = $storage->get();
             expect($retrievedCart['items']['item1']['name'])->toBe('Special Item with émojis 🛒 & symbols <>&"\'')
                 ->and($retrievedCart['items']['item1']['attributes']['unicode'])->toBe('测试中文字符');
+        });
+    });
+
+    describe('End-to-End: Cart with DatabaseStorage', function (): void {
+        test('Cart can add items and global conditions, persist, and reload with hydrated conditions', function (): void {
+            $storage = new DatabaseStorage(new CartModel);
+
+            // Build cart, add items and conditions
+            $cart = new Cart($storage);
+            $cart->addItem([
+                'id' => 'widget', 'name' => 'Widget', 'price' => 50.00, 'quantity' => 2,
+            ]);
+            $cart->addItem([
+                'id' => 'gadget', 'name' => 'Gadget', 'price' => 30.00, 'quantity' => 1,
+            ]);
+            $cart->addCondition(FixedCondition::make([
+                'name' => 'Shipping', 'value' => 7.50, 'target' => ConditionTarget::SUBTOTAL,
+            ]));
+            $cart->addCondition(PercentageCondition::make([
+                'name' => 'Coupon', 'value' => -10, 'target' => ConditionTarget::SUBTOTAL,
+            ]));
+
+            // Verify total on the live cart (items are CartItem objects in memory)
+            // Subtotal: 50*2 + 30 = 130. Shipping +7.50, Coupon -10% of 130 = -13 → 124.50
+            $originalTotal = $cart->total();
+
+            // Reload from storage — verify conditions are hydrated objects
+            $rawData = $storage->get();
+
+            // Global conditions are Condition objects, not arrays
+            expect($rawData['conditions'])->toHaveCount(2);
+            foreach ($rawData['conditions'] as $cond) {
+                expect($cond)->toBeInstanceOf(ConditionInterface::class);
+            }
+
+            // Items can be reconstructed as CartItem objects (conditions accepted by constructor)
+            foreach ($rawData['items'] as $itemData) {
+                $cartItem = new CartItem($itemData);
+                expect($cartItem->conditions)->toHaveCount(0); // no item-level conditions added
+            }
+
+            // Reconstruct items as CartItem objects and build a fresh cart to verify total
+            $reloadedCart = new Cart($storage);
+            $reloadedCart->items = collect();
+            foreach ($rawData['items'] as $id => $itemData) {
+                $reloadedCart->items->put((string) $id, new CartItem($itemData));
+            }
+            expect($reloadedCart->total()->toFloat())->toBe($originalTotal->toFloat());
+        });
+
+        test('Cart with item-level conditions survives database round-trip', function (): void {
+            $storage = new DatabaseStorage(new CartModel);
+
+            // Build cart with item-level conditions
+            $cart = new Cart($storage);
+            $cart->addItem([
+                'id' => 'shirt', 'name' => 'T-Shirt', 'price' => 25.00, 'quantity' => 3,
+            ]);
+            $cart->addItemCondition('shirt', PercentageCondition::make([
+                'name' => 'Clearance', 'value' => -20, 'target' => ConditionTarget::ITEM,
+            ]));
+
+            $originalTotal = $cart->total();
+
+            // Verify conditions in storage are hydrated
+            $rawData = $storage->get();
+            $shirtConditions = $rawData['items']['shirt']['conditions'];
+            expect($shirtConditions)->toHaveCount(1)
+                ->and($shirtConditions[0])->toBeInstanceOf(PercentageCondition::class)
+                ->and($shirtConditions[0]->name)->toBe('Clearance');
+
+            // CartItem can be constructed from the stored data (conditions accepted)
+            $cartItem = new CartItem($rawData['items']['shirt']);
+            expect($cartItem->conditions)->toHaveCount(1)
+                ->and($cartItem->conditions->first())->toBeInstanceOf(PercentageCondition::class);
+
+            // Subtotal matches: 25 * 3 = 75, -20% per item = 25*0.8*3 = 60
+            expect($cartItem->subtotal()->toFloat())->toBe(60.00);
         });
     });
 });

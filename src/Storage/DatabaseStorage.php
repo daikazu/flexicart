@@ -48,10 +48,14 @@ final readonly class DatabaseStorage implements StorageInterface
                 $itemConditions = $itemConditions->toArray();
             }
 
-            // Convert Condition objects to arrays
-            foreach ($itemConditions as $key => $condition) {
-                if ($condition instanceof Condition) {
-                    $itemConditions[$key] = $condition->toArray();
+            // Hydrate condition arrays into Condition objects
+            $hydratedConditions = [];
+            foreach ($itemConditions as $condition) {
+                if (is_array($condition) && isset($condition['type'], $condition['name'], $condition['value'])) {
+                    /** @var array<string, mixed> $condition */
+                    $hydratedConditions[] = Condition::fromArray($condition);
+                } elseif ($condition instanceof Condition) {
+                    $hydratedConditions[] = $condition;
                 }
             }
 
@@ -61,7 +65,7 @@ final readonly class DatabaseStorage implements StorageInterface
                 'price'      => new Price($item->price),
                 'quantity'   => $item->quantity,
                 'attributes' => $item->attributes,
-                'conditions' => $itemConditions,
+                'conditions' => $hydratedConditions,
             ];
         }
 
@@ -73,20 +77,21 @@ final readonly class DatabaseStorage implements StorageInterface
             $conditions = $conditions->toArray();
         }
 
-        // Convert Condition objects to arrays
-        if ($conditions instanceof Condition) {
-            $conditions = [$conditions->toArray()];
-        } elseif (is_array($conditions)) {
-            foreach ($conditions as $key => $condition) {
-                if ($condition instanceof Condition) {
-                    $conditions[$key] = $condition->toArray();
-                }
+        // Hydrate condition arrays into Condition objects
+        /** @var array<int, mixed> $conditions */
+        $hydratedConditions = [];
+        foreach ($conditions as $condition) {
+            if (is_array($condition) && isset($condition['type'], $condition['name'], $condition['value'])) {
+                /** @var array<string, mixed> $condition */
+                $hydratedConditions[] = Condition::fromArray($condition);
+            } elseif ($condition instanceof Condition) {
+                $hydratedConditions[] = $condition;
             }
         }
 
         return [
             'items'      => $items,
-            'conditions' => $conditions,
+            'conditions' => $hydratedConditions,
         ];
 
     }
@@ -247,10 +252,14 @@ final readonly class DatabaseStorage implements StorageInterface
                 $itemConditions = $itemConditions->toArray();
             }
 
-            // Convert Condition objects to arrays
-            foreach ($itemConditions as $key => $condition) {
-                if ($condition instanceof Condition) {
-                    $itemConditions[$key] = $condition->toArray();
+            // Hydrate condition arrays into Condition objects
+            $hydratedConditions = [];
+            foreach ($itemConditions as $condition) {
+                if (is_array($condition) && isset($condition['type'], $condition['name'], $condition['value'])) {
+                    /** @var array<string, mixed> $condition */
+                    $hydratedConditions[] = Condition::fromArray($condition);
+                } elseif ($condition instanceof Condition) {
+                    $hydratedConditions[] = $condition;
                 }
             }
 
@@ -260,7 +269,7 @@ final readonly class DatabaseStorage implements StorageInterface
                 'price'      => new Price($item->price),
                 'quantity'   => $item->quantity,
                 'attributes' => $item->attributes,
-                'conditions' => $itemConditions,
+                'conditions' => $hydratedConditions,
             ];
         }
 
@@ -272,20 +281,21 @@ final readonly class DatabaseStorage implements StorageInterface
             $conditions = $conditions->toArray();
         }
 
-        // Convert Condition objects to arrays
-        if ($conditions instanceof Condition) {
-            $conditions = [$conditions->toArray()];
-        } elseif (is_array($conditions)) {
-            foreach ($conditions as $key => $condition) {
-                if ($condition instanceof Condition) {
-                    $conditions[$key] = $condition->toArray();
-                }
+        // Hydrate condition arrays into Condition objects
+        /** @var array<int, mixed> $conditions */
+        $hydratedConditions = [];
+        foreach ($conditions as $condition) {
+            if (is_array($condition) && isset($condition['type'], $condition['name'], $condition['value'])) {
+                /** @var array<string, mixed> $condition */
+                $hydratedConditions[] = Condition::fromArray($condition);
+            } elseif ($condition instanceof Condition) {
+                $hydratedConditions[] = $condition;
             }
         }
 
         return [
             'items'      => $items,
-            'conditions' => $conditions,
+            'conditions' => $hydratedConditions,
         ];
     }
 

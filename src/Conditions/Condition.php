@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace Daikazu\Flexicart\Conditions;
 
 use Daikazu\Flexicart\Conditions\Contracts\ConditionInterface;
+use Daikazu\Flexicart\Conditions\Types\FixedCondition;
+use Daikazu\Flexicart\Conditions\Types\FixedTaxCondition;
+use Daikazu\Flexicart\Conditions\Types\PercentageCondition;
+use Daikazu\Flexicart\Conditions\Types\PercentageTaxCondition;
 use Daikazu\Flexicart\Enums\ConditionTarget;
 use Daikazu\Flexicart\Enums\ConditionType;
 use Illuminate\Support\Fluent;
@@ -58,6 +62,43 @@ abstract class Condition implements ConditionInterface
             taxable: $parameters['taxable'] ?? false
         );
 
+    }
+
+    /**
+     * Reconstruct a concrete Condition from its toArray() output.
+     *
+     * @param  array<string, mixed>  $data  Array as produced by Condition::toArray()
+     *
+     * @throws InvalidArgumentException When required fields are missing or type is unknown
+     */
+    public static function fromArray(array $data): self
+    {
+        $type = $data['type'] ?? null;
+        $targetString = $data['target'] ?? null;
+
+        if (! is_string($type)) {
+            throw new InvalidArgumentException('Condition array must contain a string "type" field.');
+        }
+
+        $target = is_string($targetString) ? ConditionTarget::from($targetString) : ConditionTarget::SUBTOTAL;
+
+        /** @var class-string<self> $class */
+        $class = match (true) {
+            $type === ConditionType::PERCENTAGE->value && $target === ConditionTarget::TAXABLE => PercentageTaxCondition::class,
+            $type === ConditionType::PERCENTAGE->value => PercentageCondition::class,
+            $type === ConditionType::FIXED->value && $target === ConditionTarget::TAXABLE => FixedTaxCondition::class,
+            $type === ConditionType::FIXED->value => FixedCondition::class,
+            default => throw new InvalidArgumentException("Unknown condition type: {$type}"),
+        };
+
+        return $class::make([
+            'name' => $data['name'],
+            'value' => $data['value'],
+            'target' => $target,
+            'attributes' => $data['attributes'] ?? [],
+            'order' => $data['order'] ?? 0,
+            'taxable' => $data['taxable'] ?? false,
+        ]);
     }
 
     /**
