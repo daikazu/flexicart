@@ -834,31 +834,11 @@ describe('DatabaseStorage', function (): void {
                 'name' => 'Coupon', 'value' => -10, 'target' => ConditionTarget::SUBTOTAL,
             ]));
 
-            // Verify total on the live cart (items are CartItem objects in memory)
-            // Subtotal: 50*2 + 30 = 130. Shipping +7.50, Coupon -10% of 130 = -13 → 124.50
+            // Verify total on the live cart
             $originalTotal = $cart->total();
 
-            // Reload from storage — verify conditions are hydrated objects
-            $rawData = $storage->get();
-
-            // Global conditions are Condition objects, not arrays
-            expect($rawData['conditions'])->toHaveCount(2);
-            foreach ($rawData['conditions'] as $cond) {
-                expect($cond)->toBeInstanceOf(ConditionInterface::class);
-            }
-
-            // Items can be reconstructed as CartItem objects (conditions accepted by constructor)
-            foreach ($rawData['items'] as $itemData) {
-                $cartItem = new CartItem($itemData);
-                expect($cartItem->conditions)->toHaveCount(0); // no item-level conditions added
-            }
-
-            // Reconstruct items as CartItem objects and build a fresh cart to verify total
+            // Reload from storage — Cart constructor now hydrates items automatically
             $reloadedCart = new Cart($storage);
-            $reloadedCart->items = collect();
-            foreach ($rawData['items'] as $id => $itemData) {
-                $reloadedCart->items->put((string) $id, new CartItem($itemData));
-            }
             expect($reloadedCart->total()->toFloat())->toBe($originalTotal->toFloat());
         });
 
@@ -890,6 +870,31 @@ describe('DatabaseStorage', function (): void {
 
             // Subtotal matches: 25 * 3 = 75, -20% per item = 25*0.8*3 = 60
             expect($cartItem->subtotal()->toFloat())->toBe(60.00);
+        });
+
+        test('Cart constructed from DatabaseStorage hydrates items as CartItem objects', function (): void {
+            $storage = new DatabaseStorage(new CartModel);
+            $cartId = (int) $storage->getCartId();
+
+            // Seed items directly in the database
+            CartItemModel::create([
+                'cart_id'    => $cartId,
+                'item_id'    => 'book',
+                'name'       => 'PHP Book',
+                'price'      => 40.00,
+                'quantity'   => 2,
+                'attributes' => ['format' => 'hardcover'],
+                'conditions' => [],
+            ]);
+
+            // Construct a new Cart — items should be hydrated automatically
+            $cart = new Cart($storage);
+
+            expect($cart->items)->toHaveCount(1)
+                ->and($cart->items->first())->toBeInstanceOf(CartItem::class)
+                ->and($cart->items->first()->name)->toBe('PHP Book')
+                ->and($cart->subtotal()->toFloat())->toBe(80.00)
+                ->and($cart->total()->toFloat())->toBe(80.00);
         });
     });
 });

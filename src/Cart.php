@@ -73,7 +73,19 @@ final class Cart implements CartInterface
         $rulesData = $data['rules'] ?? [];
 
         /** @var Collection<string, CartItem> $items */
-        $items = $itemsData instanceof Collection ? $itemsData : collect(is_array($itemsData) ? $itemsData : []);
+        $items = collect();
+        if ($itemsData instanceof Collection) {
+            $items = $itemsData;
+        } elseif (is_array($itemsData)) {
+            foreach ($itemsData as $itemId => $item) {
+                if ($item instanceof CartItem) {
+                    $items->put((string) $itemId, $item);
+                } elseif (is_array($item)) {
+                    /** @var array<string, mixed> $item */
+                    $items->put((string) $itemId, new CartItem($item));
+                }
+            }
+        }
         $this->items = $items;
 
         /** @var Collection<string, ConditionInterface> $conditions */
