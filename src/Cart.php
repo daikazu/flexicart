@@ -344,7 +344,7 @@ final class Cart implements CartInterface
      */
     public function item(int | string $itemId): ?CartItem
     {
-        return $this->items->get($itemId);
+        return $this->items->get((string) $itemId);
     }
 
     /**
