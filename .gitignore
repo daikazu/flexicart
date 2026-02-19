@@ -30,8 +30,19 @@ phpstan.neon
 testbench.yaml
 /coverage
 
-# AI Tools
-.claude
-CLAUDE.md
-/.junie
 
+
+## AI Tooling
+.junie
+.claude
+AGENTS.md
+.agents
+GEMINI.md
+.mcp.json
+.cursorrules
+.cursor
+boost.json
+.ai
+.codex
+.gemini
+opencode.json
