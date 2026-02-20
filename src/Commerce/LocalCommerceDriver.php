@@ -203,7 +203,13 @@ final class LocalCommerceDriver implements CommerceClientInterface
      */
     public function addToCart(string $slug, array $config, ?CartInterface $cart = null): CartItem
     {
-        throw new \BadMethodCallException('Not implemented yet.');
+        $data = $this->cartItem($slug, $config);
+
+        $cart ??= app(CartInterface::class);
+        $cart->addItem($data->toCartArray());
+
+        return $cart->item($data->id)
+            ?? throw new CommerceConnectionException("Failed to add item '{$data->id}' to cart.");
     }
 
     /**

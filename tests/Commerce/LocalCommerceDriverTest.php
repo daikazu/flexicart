@@ -337,3 +337,22 @@ describe('LocalCommerceDriver Price Resolution', function (): void {
             ->and($result->conditions)->toHaveCount(1);
     });
 });
+
+describe('LocalCommerceDriver addToCart', function (): void {
+    test('addToCart() adds item to cart and returns CartItem', function (): void {
+        $data = createConfiguredProduct();
+
+        $cart = app(\Daikazu\Flexicart\Contracts\CartInterface::class);
+
+        $cartItem = $this->driver->addToCart('patches', [
+            'variant_id' => $data['variant']->id,
+            'quantity'   => 5,
+            'currency'   => 'USD',
+        ], $cart);
+
+        expect($cartItem)->toBeInstanceOf(\Daikazu\Flexicart\CartItem::class)
+            ->and($cartItem->id)->toBe('PATCHES-2-00')
+            ->and($cartItem->quantity)->toBe(5)
+            ->and($cart->count())->toBe(5);
+    });
+});
