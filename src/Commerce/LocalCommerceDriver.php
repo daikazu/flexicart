@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Daikazu\Flexicart\Commerce;
 
-use BadMethodCallException;
 use Daikazu\Flexicart\CartItem;
 use Daikazu\Flexicart\Commerce\DTOs\CartItemData;
 use Daikazu\Flexicart\Commerce\DTOs\CollectionData;
@@ -14,6 +13,7 @@ use Daikazu\Flexicart\Commerce\Exceptions\CommerceConnectionException;
 use Daikazu\Flexicart\Contracts\CartInterface;
 use Daikazu\Flexicart\Contracts\CommerceClientInterface;
 use Illuminate\Pagination\LengthAwarePaginator;
+use InvalidArgumentException;
 
 final class LocalCommerceDriver implements CommerceClientInterface
 {
@@ -149,7 +149,22 @@ final class LocalCommerceDriver implements CommerceClientInterface
      */
     public function resolvePrice(string $slug, array $config): PriceBreakdownData
     {
-        throw new BadMethodCallException('Not implemented yet.');
+        $product = $this->findActiveProduct($slug);
+
+        try {
+            /** @var array<string, mixed> $result */
+            $result = (new \Daikazu\FlexiCommerce\Actions\Pricing\ResolvePriceAction)->handle(
+                product: $product,
+                variantId: isset($config['variant_id']) ? (int) $config['variant_id'] : null,
+                quantity: (int) ($config['quantity'] ?? 1),
+                currency: strtoupper((string) ($config['currency'] ?? 'USD')),
+                addonSelections: $config['addon_selections'] ?? [],
+            );
+        } catch (InvalidArgumentException $e) {
+            throw new CommerceConnectionException($e->getMessage(), 0, $e);
+        }
+
+        return PriceBreakdownData::fromArray($result);
     }
 
     /**
@@ -161,7 +176,22 @@ final class LocalCommerceDriver implements CommerceClientInterface
      */
     public function cartItem(string $slug, array $config): CartItemData
     {
-        throw new BadMethodCallException('Not implemented yet.');
+        $product = $this->findActiveProduct($slug);
+
+        try {
+            /** @var array<string, mixed> $result */
+            $result = (new \Daikazu\FlexiCommerce\Actions\Pricing\ResolvePriceAction)->handle(
+                product: $product,
+                variantId: isset($config['variant_id']) ? (int) $config['variant_id'] : null,
+                quantity: (int) ($config['quantity'] ?? 1),
+                currency: strtoupper((string) ($config['currency'] ?? 'USD')),
+                addonSelections: $config['addon_selections'] ?? [],
+            );
+        } catch (InvalidArgumentException $e) {
+            throw new CommerceConnectionException($e->getMessage(), 0, $e);
+        }
+
+        return CartItemData::fromArray($this->toCartItem($result, $product));
     }
 
     /**
@@ -173,7 +203,111 @@ final class LocalCommerceDriver implements CommerceClientInterface
      */
     public function addToCart(string $slug, array $config, ?CartInterface $cart = null): CartItem
     {
-        throw new BadMethodCallException('Not implemented yet.');
+        throw new \BadMethodCallException('Not implemented yet.');
+    }
+
+    /**
+     * @return object The Product model instance
+     */
+    private function findActiveProduct(string $slug): object
+    {
+        $product = \Daikazu\FlexiCommerce\Models\Product::query()
+            ->where('slug', $slug)
+            ->where('status', \Daikazu\FlexiCommerce\Enums\ProductStatus::Active)
+            ->first();
+
+        if ($product === null) {
+            throw new CommerceConnectionException(
+                "No active product found with slug '{$slug}'."
+            );
+        }
+
+        return $product;
+    }
+
+    /**
+     * Transform a ResolvePriceAction result into a cart-item array.
+     *
+     * @param  array<string, mixed>  $result
+     * @return array<string, mixed>
+     */
+    private function toCartItem(array $result, object $product): array
+    {
+        $sku = $result['variant']['sku'] ?? $product->slug;
+        $variantName = $result['variant']['name'] ?? null;
+
+        $addonParts = collect($result['addons'])
+            ->groupBy('group_code')
+            ->map(fn ($items, $group) => $group . '=' . $items->pluck('addon_code')->unique()->implode('+'))
+            ->implode(':');
+
+        $cartId = $addonParts !== '' ? "{$sku}:{$addonParts}" : $sku;
+
+        $name = $variantName !== null
+            ? "{$product->name} - {$variantName}"
+            : $product->name;
+
+        // Build option_values map from variant
+        $optionValues = [];
+        if ($result['variant'] !== null) {
+            $variant = $product->variants()
+                ->where('id', $result['variant']['id'])
+                ->with('optionValues.option')
+                ->first();
+
+            if ($variant !== null) {
+                foreach ($variant->optionValues as $ov) {
+                    $optionValues[$ov->option->code] = $ov->name;
+                }
+            }
+        }
+
+        // Build conditions from addon modifiers
+        $conditions = [];
+        foreach ($result['addons'] as $i => $addon) {
+            if ($addon['is_free']) {
+                continue;
+            }
+
+            $value = (float) $addon['unit_amount'];
+            if ($value == 0.0) {
+                continue;
+            }
+
+            $appliesTo = $addon['applies_to'] === \Daikazu\FlexiCommerce\Enums\ModifierAppliesTo::Line->value
+                ? 'subtotal'
+                : 'item';
+
+            $conditions[] = [
+                'name'       => "Addon: {$addon['name']}",
+                'value'      => $value,
+                'type'       => 'fixed',
+                'target'     => $appliesTo,
+                'attributes' => [
+                    'addon_code'  => $addon['addon_code'],
+                    'group_code'  => $addon['group_code'],
+                    'modifier_id' => $addon['modifier_id'],
+                ],
+                'order'   => $i,
+                'taxable' => true,
+            ];
+        }
+
+        return [
+            'id'         => $cartId,
+            'name'       => $name,
+            'price'      => (float) $result['unit_price'],
+            'quantity'   => $result['quantity'],
+            'attributes' => [
+                'product_slug'  => $result['product_slug'],
+                'variant_id'    => $result['variant']['id'] ?? null,
+                'sku'           => $sku,
+                'option_values' => $optionValues,
+                'source'        => 'flexi-commerce',
+                'resolved_at'   => now()->toIso8601String(),
+            ],
+            'conditions' => $conditions,
+        ];
     }
 
     /**

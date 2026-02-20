@@ -15,6 +15,86 @@ beforeEach(function (): void {
     $this->driver = new LocalCommerceDriver;
 });
 
+function createConfiguredProduct(): array
+{
+    $product = \Daikazu\FlexiCommerce\Models\Product::create([
+        'name'   => 'Patches',
+        'slug'   => 'patches',
+        'status' => 'active',
+        'type'   => 'configurable',
+    ]);
+
+    $option = \Daikazu\FlexiCommerce\Models\ProductOption::create([
+        'product_id'  => $product->id,
+        'name'        => 'Size',
+        'code'        => 'size',
+        'is_variant'  => true,
+        'is_required' => true,
+    ]);
+
+    $value = \Daikazu\FlexiCommerce\Models\ProductOptionValue::create([
+        'product_option_id' => $option->id,
+        'name'              => '2 Inch',
+        'code'              => '2-00',
+        'is_active'         => true,
+    ]);
+
+    $variant = \Daikazu\FlexiCommerce\Models\ProductVariant::create([
+        'product_id' => $product->id,
+        'sku'        => 'PATCHES-2-00',
+        'name'       => '2 Inch',
+        'is_active'  => true,
+        'signature'  => 'size:2-00',
+    ]);
+
+    $variant->optionValues()->attach($value->id, ['product_option_id' => $option->id]);
+
+    $variant->prices()->create([
+        'key'          => \Daikazu\FlexiCommerce\Enums\PriceKey::Retail->value,
+        'currency'     => 'USD',
+        'amount_minor' => 602,
+    ]);
+
+    $group = \Daikazu\FlexiCommerce\Models\AddonGroup::create([
+        'code'                 => 'backing',
+        'name'                 => 'Backing',
+        'selection_type'       => 'single',
+        'min_selected'         => 0,
+        'max_selected'         => 1,
+        'free_selection_limit' => 0,
+    ]);
+
+    $addon = \Daikazu\FlexiCommerce\Models\Addon::create([
+        'code'      => 'iron-on',
+        'name'      => 'Iron-On',
+        'is_active' => true,
+    ]);
+
+    $item = \Daikazu\FlexiCommerce\Models\AddonGroupItem::create([
+        'addon_group_id'   => $group->id,
+        'addon_id'         => $addon->id,
+        'default_selected' => false,
+        'is_active'        => true,
+        'is_free_eligible' => false,
+    ]);
+
+    $modifier = \Daikazu\FlexiCommerce\Models\AddonModifier::create([
+        'addon_group_item_id' => $item->id,
+        'modifier_type'       => 'per_qty',
+        'applies_to'          => 'unit',
+    ]);
+
+    $modifier->prices()->create([
+        'key'          => \Daikazu\FlexiCommerce\Enums\PriceKey::ModifierAmount->value,
+        'currency'     => 'USD',
+        'amount_minor' => 12,
+    ]);
+
+    $product->addonGroups()->attach($group->id, ['sort_order' => 0, 'is_active' => true]);
+
+    return ['product' => $product, 'variant' => $variant];
+}
+
 describe('LocalCommerceDriver Products', function (): void {
 
     test('products() returns paginated ProductData', function (): void {
@@ -186,4 +266,74 @@ describe('LocalCommerceDriver Collections', function (): void {
 
         $this->driver->collection('inactive-col');
     })->throws(CommerceConnectionException::class, 'inactive-col');
+});
+
+describe('LocalCommerceDriver Price Resolution', function (): void {
+    test('resolvePrice() returns PriceBreakdownData', function (): void {
+        $data = createConfiguredProduct();
+
+        $result = $this->driver->resolvePrice('patches', [
+            'variant_id' => $data['variant']->id,
+            'quantity'   => 10,
+            'currency'   => 'USD',
+        ]);
+
+        expect($result)->toBeInstanceOf(\Daikazu\Flexicart\Commerce\DTOs\PriceBreakdownData::class)
+            ->and($result->unitPrice)->toBe('6.02')
+            ->and($result->quantity)->toBe(10)
+            ->and($result->lineTotal)->toBe('60.20');
+    });
+
+    test('resolvePrice() with addon selections', function (): void {
+        $data = createConfiguredProduct();
+
+        $result = $this->driver->resolvePrice('patches', [
+            'variant_id'       => $data['variant']->id,
+            'quantity'         => 10,
+            'currency'         => 'USD',
+            'addon_selections' => [
+                'backing' => ['iron-on' => 1],
+            ],
+        ]);
+
+        expect($result->lineTotal)->toBe('61.40')
+            ->and($result->addons)->toHaveCount(1)
+            ->and($result->addons[0]['addon_code'])->toBe('iron-on');
+    });
+
+    test('resolvePrice() throws for invalid variant', function (): void {
+        createConfiguredProduct();
+
+        $this->driver->resolvePrice('patches', [
+            'variant_id' => 9999,
+            'quantity'   => 1,
+            'currency'   => 'USD',
+        ]);
+    })->throws(CommerceConnectionException::class);
+
+    test('resolvePrice() throws for non-existent product', function (): void {
+        $this->driver->resolvePrice('nonexistent', [
+            'quantity' => 1,
+            'currency' => 'USD',
+        ]);
+    })->throws(CommerceConnectionException::class, 'nonexistent');
+
+    test('cartItem() returns CartItemData', function (): void {
+        $data = createConfiguredProduct();
+
+        $result = $this->driver->cartItem('patches', [
+            'variant_id'       => $data['variant']->id,
+            'quantity'         => 10,
+            'currency'         => 'USD',
+            'addon_selections' => [
+                'backing' => ['iron-on' => 1],
+            ],
+        ]);
+
+        expect($result)->toBeInstanceOf(\Daikazu\Flexicart\Commerce\DTOs\CartItemData::class)
+            ->and($result->price)->toBe(6.02)
+            ->and($result->quantity)->toBe(10)
+            ->and($result->attributes)->toHaveKeys(['product_slug', 'variant_id', 'sku', 'option_values'])
+            ->and($result->conditions)->toHaveCount(1);
+    });
 });
