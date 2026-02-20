@@ -16,6 +16,7 @@ describe('Commerce Service Provider', function (): void {
 
     test('CommerceClient is bound as singleton when commerce is enabled', function (): void {
         config()->set('flexicart.commerce.enabled', true);
+        config()->set('flexicart.commerce.driver', 'api');
         config()->set('flexicart.commerce.base_url', 'https://app-a.test/api');
         config()->set('flexicart.commerce.token', 'test-token');
 
@@ -58,6 +59,10 @@ describe('Commerce Service Provider', function (): void {
     });
 
     test('driver=local throws when flexi-commerce is not installed', function (): void {
+        if (class_exists(\Daikazu\FlexiCommerce\FlexiCommerceServiceProvider::class)) {
+            $this->markTestSkipped('flexi-commerce is installed — cannot test missing-package error.');
+        }
+
         config()->set('flexicart.commerce.enabled', true);
         config()->set('flexicart.commerce.driver', 'local');
 

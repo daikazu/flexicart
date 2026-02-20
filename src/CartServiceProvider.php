@@ -72,13 +72,14 @@ final class CartServiceProvider extends PackageServiceProvider
 
         // Bind commerce driver when enabled
         if ($this->app['config']['flexicart.commerce.enabled'] ?? false) {
-            $this->app->singleton(CommerceClientInterface::class, function (Application $app): CommerceClientInterface {
-                /** @var \Illuminate\Config\Repository $config */
-                $config = $app['config'];
+            /** @var \Illuminate\Config\Repository $config */
+            $config = $this->app['config'];
 
-                $driver = (string) $config->get('flexicart.commerce.driver', 'auto');
+            $driver = (string) $config->get('flexicart.commerce.driver', 'auto');
+            $useLocal = $driver === 'local' || ($driver === 'auto' && $this->flexiCommerceInstalled());
 
-                if ($driver === 'local' || ($driver === 'auto' && $this->flexiCommerceInstalled())) {
+            $this->app->singleton(CommerceClientInterface::class, function (Application $app) use ($useLocal): CommerceClientInterface {
+                if ($useLocal) {
                     if (! $this->flexiCommerceInstalled()) {
                         throw new RuntimeException(
                             'Cannot use local commerce driver: flexi-commerce package is not installed.'
@@ -87,6 +88,9 @@ final class CartServiceProvider extends PackageServiceProvider
 
                     return new \Daikazu\Flexicart\Commerce\LocalCommerceDriver;
                 }
+
+                /** @var \Illuminate\Config\Repository $config */
+                $config = $app['config'];
 
                 return new CommerceClient(
                     baseUrl: (string) $config->get('flexicart.commerce.base_url', ''),
@@ -97,8 +101,12 @@ final class CartServiceProvider extends PackageServiceProvider
                 );
             });
 
-            // Keep concrete alias for backwards compatibility
-            $this->app->alias(CommerceClientInterface::class, CommerceClient::class);
+            // Register concrete alias only for the active driver
+            if ($useLocal) {
+                $this->app->alias(CommerceClientInterface::class, \Daikazu\Flexicart\Commerce\LocalCommerceDriver::class);
+            } else {
+                $this->app->alias(CommerceClientInterface::class, CommerceClient::class);
+            }
         }
 
     }

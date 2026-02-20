@@ -220,6 +220,10 @@ final class LocalCommerceDriver implements CommerceClientInterface
         $product = \Daikazu\FlexiCommerce\Models\Product::query()
             ->where('slug', $slug)
             ->where('status', \Daikazu\FlexiCommerce\Enums\ProductStatus::Active)
+            ->with([
+                'variants' => fn ($q) => $q->where('is_active', true),
+                'variants.optionValues.option',
+            ])
             ->first();
 
         if ($product === null) {
@@ -253,13 +257,10 @@ final class LocalCommerceDriver implements CommerceClientInterface
             ? "{$product->name} - {$variantName}"
             : $product->name;
 
-        // Build option_values map from variant
+        // Build option_values map from variant (pre-loaded by findActiveProduct)
         $optionValues = [];
         if ($result['variant'] !== null) {
-            $variant = $product->variants()
-                ->where('id', $result['variant']['id'])
-                ->with('optionValues.option')
-                ->first();
+            $variant = $product->variants->firstWhere('id', $result['variant']['id']);
 
             if ($variant !== null) {
                 foreach ($variant->optionValues as $ov) {
@@ -454,7 +455,16 @@ final class LocalCommerceDriver implements CommerceClientInterface
             'free_selection_limit' => $group->free_selection_limit,
             'is_auto_applied'      => $group->is_auto_applied,
             'meta'                 => $group->meta,
-            'items'                => $group->items->map(fn ($item) => [
+            'pivot'                => $group->pivot ? [
+                'label'                         => $group->pivot->label,
+                'selection_type_override'       => $group->pivot->selection_type_override,
+                'min_selected_override'         => $group->pivot->min_selected_override,
+                'max_selected_override'         => $group->pivot->max_selected_override,
+                'free_selection_limit_override' => $group->pivot->free_selection_limit_override,
+                'sort_order'                    => $group->pivot->sort_order,
+                'is_active'                     => $group->pivot->is_active,
+            ] : null,
+            'items' => $group->items->map(fn ($item) => [
                 'id'               => $item->id,
                 'addon_code'       => $item->addon->code,
                 'addon_name'       => $item->addon->name,
