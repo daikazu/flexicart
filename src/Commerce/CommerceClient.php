@@ -137,7 +137,8 @@ final class CommerceClient
         $cart ??= app(CartInterface::class);
         $cart->addItem($data->toCartArray());
 
-        return $cart->item($data->id);
+        return $cart->item($data->id)
+            ?? throw new CommerceConnectionException("Failed to add item '{$data->id}' to cart.");
     }
 
     /**
