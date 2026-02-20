@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Daikazu\Flexicart;
 
+use Daikazu\Flexicart\Commerce\CommerceClient;
 use Daikazu\Flexicart\Console\Commands\CleanupCartsCommand;
 use Daikazu\Flexicart\Contracts\CartInterface;
 use Daikazu\Flexicart\Contracts\StorageInterface;
@@ -66,6 +67,22 @@ final class CartServiceProvider extends PackageServiceProvider
 
         // Bind cart alias
         $this->app->singleton('cart', fn (Application $app): CartInterface => $app->make(CartInterface::class));
+
+        // Bind CommerceClient when enabled
+        if ($this->app['config']['flexicart.commerce.enabled'] ?? false) {
+            $this->app->singleton(CommerceClient::class, function (Application $app): CommerceClient {
+                /** @var \Illuminate\Config\Repository $config */
+                $config = $app['config'];
+
+                return new CommerceClient(
+                    baseUrl: (string) $config->get('flexicart.commerce.base_url', ''),
+                    token: (string) $config->get('flexicart.commerce.token', ''),
+                    timeout: (int) $config->get('flexicart.commerce.timeout', 10),
+                    cacheEnabled: (bool) $config->get('flexicart.commerce.cache.enabled', true),
+                    cacheTtl: (int) $config->get('flexicart.commerce.cache.ttl', 300),
+                );
+            });
+        }
 
     }
 
