@@ -138,6 +138,7 @@ return [
     */
     'commerce' => [
         'enabled'  => env('FLEXI_COMMERCE_ENABLED', false),
+        'driver'   => env('FLEXI_COMMERCE_DRIVER', 'auto'),
         'base_url' => env('FLEXI_COMMERCE_URL'),
         'token'    => env('FLEXI_COMMERCE_TOKEN'),
         'timeout'  => env('FLEXI_COMMERCE_TIMEOUT', 10),

@@ -9,6 +9,7 @@ describe('Commerce Config', function (): void {
         expect($config)->toBeArray()
             ->and($config)->toHaveKeys([
                 'enabled',
+                'driver',
                 'base_url',
                 'token',
                 'timeout',
@@ -19,5 +20,9 @@ describe('Commerce Config', function (): void {
 
     test('commerce is disabled by default', function (): void {
         expect(config('flexicart.commerce.enabled'))->toBeFalse();
+    });
+
+    test('commerce driver defaults to auto', function (): void {
+        expect(config('flexicart.commerce.driver'))->toBe('auto');
     });
 });
