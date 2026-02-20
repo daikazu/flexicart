@@ -92,7 +92,26 @@ final class LocalCommerceDriver implements CommerceClientInterface
      */
     public function collections(array $filters = []): LengthAwarePaginator
     {
-        throw new BadMethodCallException('Not implemented yet.');
+        $perPage = min((int) ($filters['per_page'] ?? 15), 100);
+        $page = (int) ($filters['page'] ?? 1);
+
+        $query = \Daikazu\FlexiCommerce\Models\ProductCollection::query()
+            ->where('is_active', true)
+            ->with('children')
+            ->orderBy('name');
+
+        $paginator = $query->paginate($perPage, ['*'], 'page', $page);
+
+        $items = $paginator->getCollection()
+            ->map(fn ($collection) => CollectionData::fromArray($this->collectionToArray($collection)))
+            ->all();
+
+        return new LengthAwarePaginator(
+            items: $items,
+            total: $paginator->total(),
+            perPage: $paginator->perPage(),
+            currentPage: $paginator->currentPage(),
+        );
     }
 
     /**
@@ -102,7 +121,23 @@ final class LocalCommerceDriver implements CommerceClientInterface
      */
     public function collection(string $slug): CollectionData
     {
-        throw new BadMethodCallException('Not implemented yet.');
+        $collection = \Daikazu\FlexiCommerce\Models\ProductCollection::query()
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->with([
+                'children',
+                'products' => fn ($q) => $q->where('status', \Daikazu\FlexiCommerce\Enums\ProductStatus::Active),
+                'products.prices',
+            ])
+            ->first();
+
+        if ($collection === null) {
+            throw new CommerceConnectionException(
+                "No active collection found with slug '{$slug}'."
+            );
+        }
+
+        return CollectionData::fromArray($this->collectionToArray($collection));
     }
 
     /**
@@ -302,6 +337,28 @@ final class LocalCommerceDriver implements CommerceClientInterface
                     'price_tiers'        => $m->priceTiers->map(fn ($t) => $this->priceTierToArray($t))->all(),
                 ])->all(),
             ])->all(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function collectionToArray(object $collection): array
+    {
+        return [
+            'slug'        => $collection->slug,
+            'name'        => $collection->name,
+            'type'        => $collection->type?->value,
+            'description' => $collection->description,
+            'is_active'   => $collection->is_active,
+            'parent_id'   => $collection->parent_id,
+            'meta'        => $collection->meta ?? [],
+            'products'    => $collection->relationLoaded('products')
+                ? $collection->products->map(fn ($p) => $this->productListToArray($p))->all()
+                : [],
+            'children' => $collection->relationLoaded('children')
+                ? $collection->children->map(fn ($c) => $this->collectionToArray($c))->all()
+                : [],
         ];
     }
 }
