@@ -7,6 +7,7 @@ namespace Daikazu\Flexicart;
 use Daikazu\Flexicart\Commerce\CommerceClient;
 use Daikazu\Flexicart\Console\Commands\CleanupCartsCommand;
 use Daikazu\Flexicart\Contracts\CartInterface;
+use Daikazu\Flexicart\Contracts\CommerceClientInterface;
 use Daikazu\Flexicart\Contracts\StorageInterface;
 use Daikazu\Flexicart\Models\CartModel;
 use Daikazu\Flexicart\Storage\DatabaseStorage;
@@ -68,11 +69,23 @@ final class CartServiceProvider extends PackageServiceProvider
         // Bind cart alias
         $this->app->singleton('cart', fn (Application $app): CartInterface => $app->make(CartInterface::class));
 
-        // Bind CommerceClient when enabled
+        // Bind commerce driver when enabled
         if ($this->app['config']['flexicart.commerce.enabled'] ?? false) {
-            $this->app->singleton(CommerceClient::class, function (Application $app): CommerceClient {
+            $this->app->singleton(CommerceClientInterface::class, function (Application $app): CommerceClientInterface {
                 /** @var \Illuminate\Config\Repository $config */
                 $config = $app['config'];
+
+                $driver = (string) $config->get('flexicart.commerce.driver', 'auto');
+
+                if ($driver === 'local' || ($driver === 'auto' && $this->flexiCommerceInstalled())) {
+                    if (! $this->flexiCommerceInstalled()) {
+                        throw new \RuntimeException(
+                            'Cannot use local commerce driver: flexi-commerce package is not installed.'
+                        );
+                    }
+
+                    return new \Daikazu\Flexicart\Commerce\LocalCommerceDriver;
+                }
 
                 return new CommerceClient(
                     baseUrl: (string) $config->get('flexicart.commerce.base_url', ''),
@@ -82,9 +95,17 @@ final class CartServiceProvider extends PackageServiceProvider
                     cacheTtl: (int) $config->get('flexicart.commerce.cache.ttl', 300),
                 );
             });
+
+            // Keep concrete alias for backwards compatibility
+            $this->app->alias(CommerceClientInterface::class, CommerceClient::class);
         }
 
     }
 
     public function packageBooted(): void {}
+
+    private function flexiCommerceInstalled(): bool
+    {
+        return class_exists(\Daikazu\FlexiCommerce\FlexiCommerceServiceProvider::class);
+    }
 }
