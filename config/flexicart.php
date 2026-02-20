@@ -124,7 +124,27 @@ return [
     */
     'merge' => [
         'default_strategy' => env('CART_MERGE_STRATEGY', 'sum'),
-        'delete_source' => env('CART_MERGE_DELETE_SOURCE', true),
+        'delete_source'    => env('CART_MERGE_DELETE_SOURCE', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Remote Commerce
+    |--------------------------------------------------------------------------
+    |
+    | Connect to a flexi-commerce API server to browse products and resolve
+    | pricing remotely. Enable this when APP-B needs catalog data from APP-A.
+    |
+    */
+    'commerce' => [
+        'enabled'  => env('FLEXI_COMMERCE_ENABLED', false),
+        'base_url' => env('FLEXI_COMMERCE_URL'),
+        'token'    => env('FLEXI_COMMERCE_TOKEN'),
+        'timeout'  => env('FLEXI_COMMERCE_TIMEOUT', 10),
+        'cache'    => [
+            'enabled' => env('FLEXI_COMMERCE_CACHE', true),
+            'ttl'     => env('FLEXI_COMMERCE_CACHE_TTL', 300),
+        ],
     ],
 
 ];
