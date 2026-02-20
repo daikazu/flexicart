@@ -12,6 +12,7 @@ use Daikazu\Flexicart\Commerce\DTOs\ProductData;
 use Daikazu\Flexicart\Commerce\Exceptions\CommerceAuthenticationException;
 use Daikazu\Flexicart\Commerce\Exceptions\CommerceConnectionException;
 use Daikazu\Flexicart\Contracts\CartInterface;
+use Daikazu\Flexicart\Contracts\CommerceClientInterface;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
@@ -19,7 +20,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
-final class CommerceClient
+final class CommerceClient implements CommerceClientInterface
 {
     private PendingRequest $http;
 
