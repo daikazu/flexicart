@@ -32,7 +32,7 @@ final class TieredRule extends AbstractRule
     public function __construct(
         string $name,
         public readonly array $tiers,
-        array|Fluent $attributes = [],
+        array | Fluent $attributes = [],
         int $order = 0,
         bool $taxable = false
     ) {
@@ -91,7 +91,7 @@ final class TieredRule extends AbstractRule
             if ($subtotalAmount >= (float) $threshold) {
                 $applicableTier = [
                     'threshold' => (float) $threshold,
-                    'discount' => (float) $discount,
+                    'discount'  => (float) $discount,
                 ];
                 break;
             }
@@ -112,7 +112,7 @@ final class TieredRule extends AbstractRule
         foreach ($this->tiers as $threshold => $discount) {
             $result[] = [
                 'threshold' => (float) $threshold,
-                'discount' => (float) $discount,
+                'discount'  => (float) $discount,
             ];
         }
 

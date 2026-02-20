@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Daikazu\Flexicart\Conditions\Rules;
 
-use Brick\Math\RoundingMode;
 use Daikazu\Flexicart\CartItem;
 use Daikazu\Flexicart\Enums\ConditionType;
 use Daikazu\Flexicart\Exceptions\PriceException;
@@ -34,8 +33,8 @@ final class BuyXGetYRule extends AbstractRule
         public readonly int $buyQuantity,
         public readonly int $getQuantity,
         public readonly float $getDiscount = 100.0,
-        public readonly string|array $itemIds = '*',
-        array|Fluent $attributes = [],
+        public readonly string | array $itemIds = '*',
+        array | Fluent $attributes = [],
         int $order = 0,
         bool $taxable = false
     ) {

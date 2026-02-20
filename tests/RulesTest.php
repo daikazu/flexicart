@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Daikazu\Flexicart\Cart;
-use Daikazu\Flexicart\CartItem;
 use Daikazu\Flexicart\Conditions\Rules\BuyXGetYRule;
 use Daikazu\Flexicart\Conditions\Rules\ItemQuantityRule;
 use Daikazu\Flexicart\Conditions\Rules\ThresholdRule;

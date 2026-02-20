@@ -32,8 +32,8 @@ abstract class AbstractRule implements RuleInterface
      */
     public function __construct(
         public readonly string $name,
-        public readonly int|float $value = 0,
-        public array|Fluent $attributes = [],
+        public readonly int | float $value = 0,
+        public array | Fluent $attributes = [],
         public int $order = 0,
         public bool $taxable = false
     ) {
@@ -113,13 +113,13 @@ abstract class AbstractRule implements RuleInterface
     public function toArray(): array
     {
         return [
-            'name' => $this->name,
-            'value' => $this->value,
-            'type' => $this->type->value,
-            'target' => $this->target->value,
+            'name'       => $this->name,
+            'value'      => $this->value,
+            'type'       => $this->type->value,
+            'target'     => $this->target->value,
             'attributes' => $this->attributes instanceof Fluent ? $this->attributes->toArray() : $this->attributes,
-            'order' => $this->order,
-            'taxable' => $this->taxable,
+            'order'      => $this->order,
+            'taxable'    => $this->taxable,
         ];
     }
 
@@ -136,7 +136,7 @@ abstract class AbstractRule implements RuleInterface
      *
      * @param  string|array<string>  $itemIds
      */
-    protected function getItemQuantity(string|array $itemIds): int
+    protected function getItemQuantity(string | array $itemIds): int
     {
         $ids = is_array($itemIds) ? $itemIds : [$itemIds];
 
@@ -185,7 +185,7 @@ abstract class AbstractRule implements RuleInterface
      * @param  string|array<string>  $itemIds
      * @return Collection<string, CartItem>
      */
-    protected function getMatchingItems(string|array $itemIds): Collection
+    protected function getMatchingItems(string | array $itemIds): Collection
     {
         $ids = is_array($itemIds) ? $itemIds : [$itemIds];
 

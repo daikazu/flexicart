@@ -30,7 +30,7 @@ final class ThresholdRule extends AbstractRule
         public readonly float $minSubtotal,
         float $discount,
         public readonly ConditionType $discountType = ConditionType::PERCENTAGE,
-        array|Fluent $attributes = [],
+        array | Fluent $attributes = [],
         int $order = 0,
         bool $taxable = false
     ) {

@@ -18,11 +18,11 @@ abstract class AbstractMergeStrategy implements MergeStrategyInterface
     protected function itemToArray(CartItem $item): array
     {
         return [
-            'id' => $item->id,
-            'name' => $item->name,
-            'price' => $item->unitPrice(),
-            'quantity' => $item->quantity,
-            'taxable' => $item->taxable,
+            'id'         => $item->id,
+            'name'       => $item->name,
+            'price'      => $item->unitPrice(),
+            'quantity'   => $item->quantity,
+            'taxable'    => $item->taxable,
             'attributes' => $item->attributes->toArray(),
             'conditions' => $item->conditions,
         ];

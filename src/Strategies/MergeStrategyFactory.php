@@ -12,9 +12,9 @@ final class MergeStrategyFactory
      * @var array<string, class-string<MergeStrategyInterface>>
      */
     private static array $strategies = [
-        'sum' => SumMergeStrategy::class,
-        'replace' => ReplaceMergeStrategy::class,
-        'max' => MaxMergeStrategy::class,
+        'sum'         => SumMergeStrategy::class,
+        'replace'     => ReplaceMergeStrategy::class,
+        'max'         => MaxMergeStrategy::class,
         'keep_target' => KeepTargetMergeStrategy::class,
     ];
 
@@ -35,7 +35,7 @@ final class MergeStrategyFactory
             );
         }
 
-        return new self::$strategies[$strategy]();
+        return new self::$strategies[$strategy];
     }
 
     /**

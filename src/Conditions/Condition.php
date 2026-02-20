@@ -85,19 +85,19 @@ abstract class Condition implements ConditionInterface
         /** @var class-string<self> $class */
         $class = match (true) {
             $type === ConditionType::PERCENTAGE->value && $target === ConditionTarget::TAXABLE => PercentageTaxCondition::class,
-            $type === ConditionType::PERCENTAGE->value => PercentageCondition::class,
-            $type === ConditionType::FIXED->value && $target === ConditionTarget::TAXABLE => FixedTaxCondition::class,
-            $type === ConditionType::FIXED->value => FixedCondition::class,
-            default => throw new InvalidArgumentException("Unknown condition type: {$type}"),
+            $type === ConditionType::PERCENTAGE->value                                         => PercentageCondition::class,
+            $type === ConditionType::FIXED->value && $target === ConditionTarget::TAXABLE      => FixedTaxCondition::class,
+            $type === ConditionType::FIXED->value                                              => FixedCondition::class,
+            default                                                                            => throw new InvalidArgumentException("Unknown condition type: {$type}"),
         };
 
         return $class::make([
-            'name' => $data['name'],
-            'value' => $data['value'],
-            'target' => $target,
+            'name'       => $data['name'],
+            'value'      => $data['value'],
+            'target'     => $target,
             'attributes' => $data['attributes'] ?? [],
-            'order' => $data['order'] ?? 0,
-            'taxable' => $data['taxable'] ?? false,
+            'order'      => $data['order'] ?? 0,
+            'taxable'    => $data['taxable'] ?? false,
         ]);
     }
 

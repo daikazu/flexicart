@@ -28,6 +28,6 @@ abstract class CartEvent
     public function __construct(string $cartId)
     {
         $this->cartId = $cartId;
-        $this->occurredAt = new DateTimeImmutable();
+        $this->occurredAt = new DateTimeImmutable;
     }
 }

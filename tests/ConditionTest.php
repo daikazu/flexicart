@@ -515,7 +515,7 @@ describe('Conditions', function (): void {
 
         test('reconstructs FixedCondition with item target', function (): void {
             $restored = Condition::fromArray([
-                'name' => 'Item Add-on', 'value' => 3.00, 'type' => 'fixed',
+                'name'   => 'Item Add-on', 'value' => 3.00, 'type' => 'fixed',
                 'target' => 'item', 'order' => 0, 'taxable' => false, 'attributes' => [],
             ]);
 
@@ -536,7 +536,7 @@ describe('Conditions', function (): void {
 
         test('reconstructs FixedTaxCondition from taxable target + fixed type', function (): void {
             $restored = Condition::fromArray([
-                'name' => 'Flat Tax', 'value' => 2.00, 'type' => 'fixed',
+                'name'   => 'Flat Tax', 'value' => 2.00, 'type' => 'fixed',
                 'target' => 'taxable', 'order' => 0, 'taxable' => false, 'attributes' => [],
             ]);
 

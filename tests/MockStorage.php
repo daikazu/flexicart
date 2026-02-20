@@ -26,7 +26,7 @@ class MockStorage implements StorageInterface
     }
 
     /**
-     * @param array<string, mixed> $cart
+     * @param  array<string, mixed>  $cart
      * @return array<string, mixed>
      */
     public function put(array $cart): array

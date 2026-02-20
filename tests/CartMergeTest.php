@@ -3,11 +3,9 @@
 declare(strict_types=1);
 
 use Daikazu\Flexicart\Cart;
-use Daikazu\Flexicart\CartItem;
 use Daikazu\Flexicart\Conditions\Types\FixedCondition;
 use Daikazu\Flexicart\Conditions\Types\PercentageCondition;
 use Daikazu\Flexicart\Events\CartMerged;
-use Daikazu\Flexicart\Exceptions\CartException;
 use Daikazu\Flexicart\Strategies\KeepTargetMergeStrategy;
 use Daikazu\Flexicart\Strategies\MaxMergeStrategy;
 use Daikazu\Flexicart\Strategies\MergeStrategyFactory;
@@ -36,16 +34,16 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $targetCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
-                'price' => 10.00,
+                'id'       => 'product1',
+                'name'     => 'Widget',
+                'price'    => 10.00,
                 'quantity' => 2,
             ]);
 
             $sourceCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget Updated',
-                'price' => 12.00,
+                'id'       => 'product1',
+                'name'     => 'Widget Updated',
+                'price'    => 12.00,
                 'quantity' => 3,
             ]);
 
@@ -66,14 +64,14 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $targetCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
+                'id'    => 'product1',
+                'name'  => 'Widget',
                 'price' => 10.00,
             ]);
 
             $sourceCart->addItem([
-                'id' => 'product2',
-                'name' => 'Gadget',
+                'id'    => 'product2',
+                'name'  => 'Gadget',
                 'price' => 20.00,
             ]);
 
@@ -127,16 +125,16 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $targetCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
-                'price' => 10.00,
+                'id'       => 'product1',
+                'name'     => 'Widget',
+                'price'    => 10.00,
                 'quantity' => 5,
             ]);
 
             $sourceCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget New',
-                'price' => 15.00,
+                'id'       => 'product1',
+                'name'     => 'Widget New',
+                'price'    => 15.00,
                 'quantity' => 2,
             ]);
 
@@ -175,16 +173,16 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $targetCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
-                'price' => 10.00,
+                'id'       => 'product1',
+                'name'     => 'Widget',
+                'price'    => 10.00,
                 'quantity' => 5,
             ]);
 
             $sourceCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget Updated',
-                'price' => 12.00,
+                'id'       => 'product1',
+                'name'     => 'Widget Updated',
+                'price'    => 12.00,
                 'quantity' => 3,
             ]);
 
@@ -202,16 +200,16 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $targetCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
-                'price' => 10.00,
+                'id'       => 'product1',
+                'name'     => 'Widget',
+                'price'    => 10.00,
                 'quantity' => 2,
             ]);
 
             $sourceCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget Updated',
-                'price' => 12.00,
+                'id'       => 'product1',
+                'name'     => 'Widget Updated',
+                'price'    => 12.00,
                 'quantity' => 7,
             ]);
 
@@ -231,16 +229,16 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $targetCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget Original',
-                'price' => 10.00,
+                'id'       => 'product1',
+                'name'     => 'Widget Original',
+                'price'    => 10.00,
                 'quantity' => 2,
             ]);
 
             $sourceCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget Updated',
-                'price' => 15.00,
+                'id'       => 'product1',
+                'name'     => 'Widget Updated',
+                'price'    => 15.00,
                 'quantity' => 5,
             ]);
 
@@ -260,14 +258,14 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $targetCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
+                'id'    => 'product1',
+                'name'  => 'Widget',
                 'price' => 10.00,
             ]);
 
             $sourceCart->addItem([
-                'id' => 'product2',
-                'name' => 'New Item',
+                'id'    => 'product2',
+                'name'  => 'New Item',
                 'price' => 25.00,
             ]);
 
@@ -350,8 +348,8 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $sourceCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
+                'id'    => 'product1',
+                'name'  => 'Widget',
                 'price' => 10.00,
             ]);
 
@@ -375,20 +373,20 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $targetCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
-                'price' => 10.00,
+                'id'       => 'product1',
+                'name'     => 'Widget',
+                'price'    => 10.00,
                 'quantity' => 2,
             ]);
 
             $sourceCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
-                'price' => 10.00,
+                'id'       => 'product1',
+                'name'     => 'Widget',
+                'price'    => 10.00,
                 'quantity' => 3,
             ]);
 
-            $targetCart->mergeFrom($sourceCart, new MaxMergeStrategy());
+            $targetCart->mergeFrom($sourceCart, new MaxMergeStrategy);
 
             expect($targetCart->item('product1')->quantity)->toBe(3);
         });
@@ -400,9 +398,9 @@ describe('Cart Merging', function (): void {
             $cart = new Cart($storage);
 
             $cart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
-                'price' => 10.00,
+                'id'       => 'product1',
+                'name'     => 'Widget',
+                'price'    => 10.00,
                 'quantity' => 2,
             ]);
 
@@ -420,8 +418,8 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $targetCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
+                'id'    => 'product1',
+                'name'  => 'Widget',
                 'price' => 10.00,
             ]);
 
@@ -439,8 +437,8 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $sourceCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
+                'id'    => 'product1',
+                'name'  => 'Widget',
                 'price' => 10.00,
             ]);
 
@@ -460,16 +458,16 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $targetCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
-                'price' => 10.00,
+                'id'       => 'product1',
+                'name'     => 'Widget',
+                'price'    => 10.00,
                 'quantity' => 2,
             ]);
 
             $sourceCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
-                'price' => 10.00,
+                'id'       => 'product1',
+                'name'     => 'Widget',
+                'price'    => 10.00,
                 'quantity' => 3,
             ]);
 
@@ -490,8 +488,8 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $sourceCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
+                'id'    => 'product1',
+                'name'  => 'Widget',
                 'price' => 10.00,
             ]);
 
@@ -513,8 +511,8 @@ describe('Cart Merging', function (): void {
             $sourceCart = new Cart($sourceStorage);
 
             $sourceCart->addItem([
-                'id' => 'product1',
-                'name' => 'Widget',
+                'id'    => 'product1',
+                'name'  => 'Widget',
                 'price' => 10.00,
             ]);
 

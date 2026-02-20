@@ -36,8 +36,8 @@ describe('Cart Events', function (): void {
     describe('Item Events', function (): void {
         test('ItemAdded event is dispatched when adding a new item', function (): void {
             $this->cart->addItem([
-                'id' => 'product1',
-                'name' => 'Test Product',
+                'id'    => 'product1',
+                'name'  => 'Test Product',
                 'price' => 100.00,
             ]);
 
@@ -50,8 +50,8 @@ describe('Cart Events', function (): void {
 
         test('ItemAdded event is dispatched when adding a CartItem object', function (): void {
             $cartItem = new CartItem([
-                'id' => 'product2',
-                'name' => 'CartItem Product',
+                'id'    => 'product2',
+                'name'  => 'CartItem Product',
                 'price' => 50.00,
             ]);
 
@@ -65,18 +65,18 @@ describe('Cart Events', function (): void {
 
         test('ItemQuantityUpdated event is dispatched when adding existing item', function (): void {
             $this->cart->addItem([
-                'id' => 'product1',
-                'name' => 'Test Product',
-                'price' => 100.00,
+                'id'       => 'product1',
+                'name'     => 'Test Product',
+                'price'    => 100.00,
                 'quantity' => 2,
             ]);
 
             Event::fake(); // Reset fake to only capture the second add
 
             $this->cart->addItem([
-                'id' => 'product1',
-                'name' => 'Test Product',
-                'price' => 100.00,
+                'id'       => 'product1',
+                'name'     => 'Test Product',
+                'price'    => 100.00,
                 'quantity' => 3,
             ]);
 
@@ -91,8 +91,8 @@ describe('Cart Events', function (): void {
 
         test('ItemUpdated event is dispatched when updating an item', function (): void {
             $this->cart->addItem([
-                'id' => 'product1',
-                'name' => 'Test Product',
+                'id'    => 'product1',
+                'name'  => 'Test Product',
                 'price' => 100.00,
             ]);
 
@@ -100,7 +100,7 @@ describe('Cart Events', function (): void {
 
             $this->cart->updateItem('product1', [
                 'quantity' => 5,
-                'name' => 'Updated Product',
+                'name'     => 'Updated Product',
             ]);
 
             Event::assertDispatched(ItemUpdated::class, function (ItemUpdated $event): bool {
@@ -119,8 +119,8 @@ describe('Cart Events', function (): void {
 
         test('ItemRemoved event is dispatched when removing an item', function (): void {
             $this->cart->addItem([
-                'id' => 'product1',
-                'name' => 'Test Product',
+                'id'    => 'product1',
+                'name'  => 'Test Product',
                 'price' => 100.00,
             ]);
 
@@ -144,14 +144,14 @@ describe('Cart Events', function (): void {
     describe('Cart Clear and Reset Events', function (): void {
         test('CartCleared event is dispatched when clearing items', function (): void {
             $this->cart->addItem([
-                'id' => 'product1',
-                'name' => 'Product 1',
+                'id'    => 'product1',
+                'name'  => 'Product 1',
                 'price' => 100.00,
             ]);
 
             $this->cart->addItem([
-                'id' => 'product2',
-                'name' => 'Product 2',
+                'id'    => 'product2',
+                'name'  => 'Product 2',
                 'price' => 200.00,
             ]);
 
@@ -174,8 +174,8 @@ describe('Cart Events', function (): void {
 
         test('CartReset event is dispatched when resetting cart', function (): void {
             $this->cart->addItem([
-                'id' => 'product1',
-                'name' => 'Product 1',
+                'id'    => 'product1',
+                'name'  => 'Product 1',
                 'price' => 100.00,
             ]);
 
@@ -204,7 +204,7 @@ describe('Cart Events', function (): void {
 
             $this->cart->addCondition($condition);
 
-            Event::assertDispatched(ConditionAdded::class, function (ConditionAdded $event) use ($condition): bool {
+            Event::assertDispatched(ConditionAdded::class, function (ConditionAdded $event): bool {
                 return $event->condition->name === 'Discount'
                     && $event->condition->value === -10.00
                     && $event->replaced === false;
@@ -275,8 +275,8 @@ describe('Cart Events', function (): void {
     describe('Item Condition Events', function (): void {
         test('ItemConditionAdded event is dispatched when adding item condition', function (): void {
             $this->cart->addItem([
-                'id' => 'product1',
-                'name' => 'Test Product',
+                'id'    => 'product1',
+                'name'  => 'Test Product',
                 'price' => 100.00,
             ]);
 
@@ -299,8 +299,8 @@ describe('Cart Events', function (): void {
 
         test('ItemConditionRemoved event is dispatched when removing item condition', function (): void {
             $this->cart->addItem([
-                'id' => 'product1',
-                'name' => 'Test Product',
+                'id'    => 'product1',
+                'name'  => 'Test Product',
                 'price' => 100.00,
             ]);
 
@@ -329,8 +329,8 @@ describe('Cart Events', function (): void {
             config(['flexicart.events.enabled' => false]);
 
             $this->cart->addItem([
-                'id' => 'product1',
-                'name' => 'Test Product',
+                'id'    => 'product1',
+                'name'  => 'Test Product',
                 'price' => 100.00,
             ]);
 
@@ -341,8 +341,8 @@ describe('Cart Events', function (): void {
             config(['flexicart.events.enabled' => true]);
 
             $this->cart->addItem([
-                'id' => 'product1',
-                'name' => 'Test Product',
+                'id'    => 'product1',
+                'name'  => 'Test Product',
                 'price' => 100.00,
             ]);
 
@@ -353,8 +353,8 @@ describe('Cart Events', function (): void {
     describe('Event Properties', function (): void {
         test('all events have cartId and occurredAt properties', function (): void {
             $this->cart->addItem([
-                'id' => 'product1',
-                'name' => 'Test Product',
+                'id'    => 'product1',
+                'name'  => 'Test Product',
                 'price' => 100.00,
             ]);
 

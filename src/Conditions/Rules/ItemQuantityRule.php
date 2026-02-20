@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Daikazu\Flexicart\Conditions\Rules;
 
 use Brick\Math\RoundingMode;
-use Daikazu\Flexicart\CartItem;
 use Daikazu\Flexicart\Enums\ConditionType;
 use Daikazu\Flexicart\Exceptions\PriceException;
 use Daikazu\Flexicart\Price;
@@ -33,9 +32,9 @@ final class ItemQuantityRule extends AbstractRule
         public readonly int $minQuantity,
         float $discount,
         public readonly ConditionType $discountType = ConditionType::PERCENTAGE,
-        public readonly string|array $itemIds = '*',
+        public readonly string | array $itemIds = '*',
         public readonly bool $perItem = false,
-        array|Fluent $attributes = [],
+        array | Fluent $attributes = [],
         int $order = 0,
         bool $taxable = false
     ) {

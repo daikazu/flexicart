@@ -24,11 +24,11 @@ final class SumMergeStrategy extends AbstractMergeStrategy
     public function mergeItem(CartItem $targetItem, CartItem $sourceItem): array
     {
         return [
-            'id' => $targetItem->id,
-            'name' => $sourceItem->name,
-            'price' => $sourceItem->unitPrice(),
-            'quantity' => $targetItem->quantity + $sourceItem->quantity,
-            'taxable' => $sourceItem->taxable,
+            'id'         => $targetItem->id,
+            'name'       => $sourceItem->name,
+            'price'      => $sourceItem->unitPrice(),
+            'quantity'   => $targetItem->quantity + $sourceItem->quantity,
+            'taxable'    => $sourceItem->taxable,
             'attributes' => $sourceItem->attributes->toArray(),
             'conditions' => $this->mergeItemConditions($targetItem->conditions, $sourceItem->conditions),
         ];

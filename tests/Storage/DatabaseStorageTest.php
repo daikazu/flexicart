@@ -661,13 +661,13 @@ describe('DatabaseStorage', function (): void {
             $storage = new DatabaseStorage($cartModel);
 
             $discount = PercentageCondition::make([
-                'name' => 'sale',
-                'value' => -20,
+                'name'   => 'sale',
+                'value'  => -20,
                 'target' => ConditionTarget::SUBTOTAL,
             ]);
             $shipping = FixedCondition::make([
-                'name' => 'shipping',
-                'value' => 7.50,
+                'name'   => 'shipping',
+                'value'  => 7.50,
                 'target' => ConditionTarget::SUBTOTAL,
             ]);
 
