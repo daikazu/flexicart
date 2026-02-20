@@ -13,6 +13,7 @@ use Daikazu\Flexicart\Models\CartModel;
 use Daikazu\Flexicart\Storage\DatabaseStorage;
 use Daikazu\Flexicart\Storage\SessionStorage;
 use Illuminate\Foundation\Application;
+use RuntimeException;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -79,7 +80,7 @@ final class CartServiceProvider extends PackageServiceProvider
 
                 if ($driver === 'local' || ($driver === 'auto' && $this->flexiCommerceInstalled())) {
                     if (! $this->flexiCommerceInstalled()) {
-                        throw new \RuntimeException(
+                        throw new RuntimeException(
                             'Cannot use local commerce driver: flexi-commerce package is not installed.'
                         );
                     }
