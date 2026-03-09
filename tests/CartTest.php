@@ -272,6 +272,23 @@ describe('Cart', function (): void {
 
                 Event::assertDispatched(\Daikazu\Flexicart\Events\ItemAdded::class, 2);
             });
+
+            test('adds CartItem object as new line when behavior is New and ID exists', function (): void {
+                $cartItem = new CartItem([
+                    'id'       => 'product1',
+                    'name'     => 'Test Product',
+                    'price'    => 10.00,
+                    'quantity' => 1,
+                ]);
+
+                $this->cart->addItem($cartItem);
+                $this->cart->addItem($cartItem, \Daikazu\Flexicart\Enums\AddItemBehavior::New);
+
+                expect($this->cart->items())->toHaveCount(2)
+                    ->and($this->cart->item('product1'))->not->toBeNull()
+                    ->and($this->cart->item('product1:1'))->not->toBeNull()
+                    ->and($this->cart->item('product1:1')->quantity)->toBe(1);
+            });
         });
 
         describe('Updating Items', function (): void {
