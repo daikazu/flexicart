@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Daikazu\Flexicart\Contracts;
 
 use Daikazu\Flexicart\CartItem;
+use Daikazu\Flexicart\Enums\AddItemBehavior;
 use Daikazu\Flexicart\Price;
 use Illuminate\Support\Collection;
 
@@ -16,7 +17,7 @@ interface CartInterface
      * @param  array<string, mixed>|CartItem  $item
      * @return $this
      */
-    public function addItem(array | CartItem $item): self;
+    public function addItem(array | CartItem $item, ?AddItemBehavior $behavior = null): self;
 
     /**
      * Get the cart contents

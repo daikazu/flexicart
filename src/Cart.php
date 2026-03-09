@@ -13,6 +13,7 @@ use Daikazu\Flexicart\Conditions\Contracts\ConditionInterface;
 use Daikazu\Flexicart\Conditions\Rules\RuleInterface;
 use Daikazu\Flexicart\Contracts\CartInterface;
 use Daikazu\Flexicart\Contracts\StorageInterface;
+use Daikazu\Flexicart\Enums\AddItemBehavior;
 use Daikazu\Flexicart\Enums\ConditionTarget;
 use Daikazu\Flexicart\Enums\ConditionType;
 use Daikazu\Flexicart\Events\CartCleared;
@@ -160,7 +161,7 @@ final class Cart implements CartInterface
      * @throws CartException
      * @throws PriceException
      */
-    public function addItem(array | CartItem $item): self
+    public function addItem(array | CartItem $item, ?AddItemBehavior $behavior = null): self
     {
         if ($item instanceof CartItem) {
             $existingItem = $this->items->get((string) $item->id);
