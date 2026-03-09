@@ -86,8 +86,8 @@ return [
     |
     | Controls what happens when adding an item that already exists in the cart.
     |
-    |   - 'update': Sum quantities, merge attributes (default)
-    |   - 'new': Always add as a separate line item with a unique ID
+    | - 'update': Sum quantities, merge attributes (default)
+    | - 'new': Always add as a separate line item with a unique ID
     |
     */
     'add_item_behavior' => env('CART_ADD_ITEM_BEHAVIOR', 'update'),

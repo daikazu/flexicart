@@ -12,6 +12,7 @@ use Daikazu\Flexicart\Commerce\DTOs\ProductData;
 use Daikazu\Flexicart\Commerce\Exceptions\CommerceAuthenticationException;
 use Daikazu\Flexicart\Commerce\Exceptions\CommerceConnectionException;
 use Daikazu\Flexicart\Contracts\CartInterface;
+use Daikazu\Flexicart\Enums\AddItemBehavior;
 use Daikazu\Flexicart\Contracts\CommerceClientInterface;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
@@ -131,14 +132,20 @@ final class CommerceClient implements CommerceClientInterface
      * @throws CommerceConnectionException
      * @throws CommerceAuthenticationException
      */
-    public function addToCart(string $slug, array $config, ?CartInterface $cart = null): CartItem
+    public function addToCart(string $slug, array $config, ?CartInterface $cart = null, ?AddItemBehavior $behavior = null): CartItem
     {
         $data = $this->cartItem($slug, $config);
 
         $cart ??= app(CartInterface::class);
-        $cart->addItem($data->toCartArray());
+        $cart->addItem($data->toCartArray(), $behavior);
 
-        return $cart->item($data->id)
+        // When behavior is New, the ID may have been suffixed — find by base ID or suffixed ID
+        $item = $cart->item($data->id);
+        if ($item === null && $behavior === AddItemBehavior::New) {
+            $item = $cart->items()->last();
+        }
+
+        return $item
             ?? throw new CommerceConnectionException("Failed to add item '{$data->id}' to cart.");
     }
 

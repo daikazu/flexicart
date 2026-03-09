@@ -6,6 +6,7 @@ namespace Daikazu\Flexicart\Contracts;
 
 use Daikazu\Flexicart\CartItem;
 use Daikazu\Flexicart\Commerce\DTOs\CartItemData;
+use Daikazu\Flexicart\Enums\AddItemBehavior;
 use Daikazu\Flexicart\Commerce\DTOs\CollectionData;
 use Daikazu\Flexicart\Commerce\DTOs\PriceBreakdownData;
 use Daikazu\Flexicart\Commerce\DTOs\ProductData;
@@ -40,5 +41,5 @@ interface CommerceClientInterface
     /**
      * @param  array<string, mixed>  $config
      */
-    public function addToCart(string $slug, array $config, ?CartInterface $cart = null): CartItem;
+    public function addToCart(string $slug, array $config, ?CartInterface $cart = null, ?AddItemBehavior $behavior = null): CartItem;
 }

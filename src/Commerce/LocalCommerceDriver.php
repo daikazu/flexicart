@@ -11,6 +11,7 @@ use Daikazu\Flexicart\Commerce\DTOs\PriceBreakdownData;
 use Daikazu\Flexicart\Commerce\DTOs\ProductData;
 use Daikazu\Flexicart\Commerce\Exceptions\CommerceConnectionException;
 use Daikazu\Flexicart\Contracts\CartInterface;
+use Daikazu\Flexicart\Enums\AddItemBehavior;
 use Daikazu\Flexicart\Contracts\CommerceClientInterface;
 use Illuminate\Pagination\LengthAwarePaginator;
 use InvalidArgumentException;
@@ -201,14 +202,20 @@ final class LocalCommerceDriver implements CommerceClientInterface
      *
      * @throws CommerceConnectionException
      */
-    public function addToCart(string $slug, array $config, ?CartInterface $cart = null): CartItem
+    public function addToCart(string $slug, array $config, ?CartInterface $cart = null, ?AddItemBehavior $behavior = null): CartItem
     {
         $data = $this->cartItem($slug, $config);
 
         $cart ??= app(CartInterface::class);
-        $cart->addItem($data->toCartArray());
+        $cart->addItem($data->toCartArray(), $behavior);
 
-        return $cart->item($data->id)
+        // When behavior is New, the ID may have been suffixed — find by base ID or suffixed ID
+        $item = $cart->item($data->id);
+        if ($item === null && $behavior === AddItemBehavior::New) {
+            $item = $cart->items()->last();
+        }
+
+        return $item
             ?? throw new CommerceConnectionException("Failed to add item '{$data->id}' to cart.");
     }
 
