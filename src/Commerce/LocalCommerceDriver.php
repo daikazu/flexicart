@@ -80,11 +80,13 @@ final class LocalCommerceDriver implements CommerceClientInterface
                 'variants.optionValues',
                 'variants.prices',
                 'variants.priceTiers.prices',
+                'variants.media',
                 'addonGroups'       => fn ($q) => $q->wherePivot('is_active', true),
                 'addonGroups.items' => fn ($q) => $q->where('is_active', true),
                 'addonGroups.items.addon',
                 'addonGroups.items.modifiers.prices',
                 'addonGroups.items.modifiers.priceTiers.prices',
+                'media',
             ]);
 
         if ($store = $this->resolveStore()) {
@@ -418,18 +420,34 @@ final class LocalCommerceDriver implements CommerceClientInterface
      */
     private function productToArray(object $product): array
     {
+        $imageUrls = [];
+        $digitalAssets = [];
+
+        if (method_exists($product, 'getMedia')) {
+            $imageUrls = $product->getMedia('images')->map(fn ($m) => $m->getUrl())->all();
+            $digitalAssets = $product->getMedia('documents')->map(fn ($m) => [
+                'name'      => $m->name,
+                'file_name' => $m->file_name,
+                'mime_type' => $m->mime_type,
+                'size'      => $m->size,
+                'url'       => $m->getUrl(),
+            ])->all();
+        }
+
         return [
-            'slug'         => $product->slug,
-            'name'         => $product->name,
-            'description'  => $product->description,
-            'status'       => $product->status?->value,
-            'type'         => $product->type?->value,
-            'meta'         => $product->meta ?? [],
-            'prices'       => $product->prices->map(fn ($p) => $this->priceToArray($p))->all(),
-            'price_tiers'  => $product->priceTiers->map(fn ($t) => $this->priceTierToArray($t))->all(),
-            'options'      => $product->options->map(fn ($o) => $this->optionToArray($o))->all(),
-            'variants'     => $product->variants->map(fn ($v) => $this->variantToArray($v))->all(),
-            'addon_groups' => $product->addonGroups->map(fn ($g) => $this->addonGroupToArray($g))->all(),
+            'slug'           => $product->slug,
+            'name'           => $product->name,
+            'description'    => $product->description,
+            'status'         => $product->status?->value,
+            'type'           => $product->type?->value,
+            'meta'           => $product->meta ?? [],
+            'image_urls'     => $imageUrls,
+            'digital_assets' => $digitalAssets,
+            'prices'         => $product->prices->map(fn ($p) => $this->priceToArray($p))->all(),
+            'price_tiers'    => $product->priceTiers->map(fn ($t) => $this->priceTierToArray($t))->all(),
+            'options'        => $product->options->map(fn ($o) => $this->optionToArray($o))->all(),
+            'variants'       => $product->variants->map(fn ($v) => $this->variantToArray($v))->all(),
+            'addon_groups'   => $product->addonGroups->map(fn ($g) => $this->addonGroupToArray($g))->all(),
         ];
     }
 
@@ -511,6 +529,9 @@ final class LocalCommerceDriver implements CommerceClientInterface
                 'sort_order' => $ov->sort_order,
                 'meta'       => $ov->meta,
             ])->all(),
+            'image_urls' => method_exists($variant, 'getMedia')
+                ? $variant->getMedia('images')->map(fn ($m) => $m->getUrl())->all()
+                : [],
             'prices'      => $variant->prices->map(fn ($p) => $this->priceToArray($p))->all(),
             'price_tiers' => $variant->priceTiers->map(fn ($t) => $this->priceTierToArray($t))->all(),
         ];
