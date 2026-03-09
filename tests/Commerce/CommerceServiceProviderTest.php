@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Daikazu\Flexicart\Commerce\CommerceClient;
 use Daikazu\Flexicart\Contracts\CommerceClientInterface;
+use Illuminate\Support\Facades\Http;
 
 describe('Commerce Service Provider', function (): void {
 
@@ -76,5 +77,47 @@ describe('Commerce Service Provider', function (): void {
         config()->set('flexicart.commerce.enabled', false);
 
         expect(app()->bound(CommerceClientInterface::class))->toBeFalse();
+    });
+
+    test('CommerceClient receives store_id from config', function (): void {
+        config()->set('flexicart.commerce.enabled', true);
+        config()->set('flexicart.commerce.driver', 'api');
+        config()->set('flexicart.commerce.base_url', 'https://app-a.test/api');
+        config()->set('flexicart.commerce.token', 'test-token');
+        config()->set('flexicart.commerce.store_id', 'my-store');
+
+        $provider = app(\Daikazu\Flexicart\CartServiceProvider::class, ['app' => app()]);
+        $provider->packageRegistered();
+
+        Http::fake(['*' => Http::response([
+            'data' => [],
+            'meta' => ['total' => 0, 'per_page' => 15, 'current_page' => 1],
+        ])]);
+
+        $client = app(CommerceClientInterface::class);
+        $client->products();
+
+        Http::assertSent(fn ($request): bool => $request->hasHeader('X-Store-Id', 'my-store'));
+    });
+
+    test('CommerceClient works without store_id', function (): void {
+        config()->set('flexicart.commerce.enabled', true);
+        config()->set('flexicart.commerce.driver', 'api');
+        config()->set('flexicart.commerce.base_url', 'https://app-a.test/api');
+        config()->set('flexicart.commerce.token', 'test-token');
+        config()->set('flexicart.commerce.store_id', null);
+
+        $provider = app(\Daikazu\Flexicart\CartServiceProvider::class, ['app' => app()]);
+        $provider->packageRegistered();
+
+        Http::fake(['*' => Http::response([
+            'data' => [],
+            'meta' => ['total' => 0, 'per_page' => 15, 'current_page' => 1],
+        ])]);
+
+        $client = app(CommerceClientInterface::class);
+        $client->products();
+
+        Http::assertSent(fn ($request): bool => ! $request->hasHeader('X-Store-Id'));
     });
 });

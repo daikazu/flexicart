@@ -11,13 +11,22 @@ use Daikazu\Flexicart\Commerce\DTOs\PriceBreakdownData;
 use Daikazu\Flexicart\Commerce\DTOs\ProductData;
 use Daikazu\Flexicart\Commerce\Exceptions\CommerceConnectionException;
 use Daikazu\Flexicart\Contracts\CartInterface;
-use Daikazu\Flexicart\Enums\AddItemBehavior;
 use Daikazu\Flexicart\Contracts\CommerceClientInterface;
+use Daikazu\Flexicart\Enums\AddItemBehavior;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
 
 final class LocalCommerceDriver implements CommerceClientInterface
 {
+    private ?object $store = null;
+
+    private bool $storeResolved = false;
+
+    public function __construct(
+        private readonly ?string $storeId = null,
+    ) {}
+
     /**
      * List active products (paginated).
      *
@@ -34,6 +43,10 @@ final class LocalCommerceDriver implements CommerceClientInterface
             ->where('status', \Daikazu\FlexiCommerce\Enums\ProductStatus::Active)
             ->with('prices')
             ->orderBy('name');
+
+        if ($store = $this->resolveStore()) {
+            $query->forStore($store);
+        }
 
         $paginator = $query->paginate($perPage, ['*'], 'page', $page);
 
@@ -56,7 +69,7 @@ final class LocalCommerceDriver implements CommerceClientInterface
      */
     public function product(string $slug): ProductData
     {
-        $product = \Daikazu\FlexiCommerce\Models\Product::query()
+        $query = \Daikazu\FlexiCommerce\Models\Product::query()
             ->where('slug', $slug)
             ->where('status', \Daikazu\FlexiCommerce\Enums\ProductStatus::Active)
             ->with([
@@ -72,8 +85,13 @@ final class LocalCommerceDriver implements CommerceClientInterface
                 'addonGroups.items.addon',
                 'addonGroups.items.modifiers.prices',
                 'addonGroups.items.modifiers.priceTiers.prices',
-            ])
-            ->first();
+            ]);
+
+        if ($store = $this->resolveStore()) {
+            $query->forStore($store);
+        }
+
+        $product = $query->first();
 
         if ($product === null) {
             throw new CommerceConnectionException(
@@ -220,18 +238,69 @@ final class LocalCommerceDriver implements CommerceClientInterface
     }
 
     /**
+     * Resolve the Store model from the configured storeId (cached).
+     *
+     * @throws CommerceConnectionException
+     */
+    private function resolveStore(): ?object
+    {
+        if ($this->storeId === null) {
+            return null;
+        }
+
+        if ($this->storeResolved) {
+            return $this->store;
+        }
+
+        $this->storeResolved = true;
+
+        $cacheKey = 'flexicart:local-store:' . $this->storeId;
+
+        /** @var int|false $storePk */
+        $storePk = Cache::remember($cacheKey, 60, function (): int | false {
+            return \Daikazu\FlexiCommerce\Models\Store::query()
+                ->where('store_id', $this->storeId)
+                ->where('is_active', true)
+                ->first()?->getKey() ?? false;
+        });
+
+        if ($storePk === false) {
+            throw new CommerceConnectionException(
+                "No active store found with store_id '{$this->storeId}'."
+            );
+        }
+
+        $this->store = \Daikazu\FlexiCommerce\Models\Store::find($storePk);
+
+        if ($this->store === null) {
+            Cache::forget($cacheKey);
+
+            throw new CommerceConnectionException(
+                "No active store found with store_id '{$this->storeId}'."
+            );
+        }
+
+        return $this->store;
+    }
+
+    /**
      * @return object The Product model instance
      */
     private function findActiveProduct(string $slug): object
     {
-        $product = \Daikazu\FlexiCommerce\Models\Product::query()
+        $query = \Daikazu\FlexiCommerce\Models\Product::query()
             ->where('slug', $slug)
             ->where('status', \Daikazu\FlexiCommerce\Enums\ProductStatus::Active)
             ->with([
                 'variants' => fn ($q) => $q->where('is_active', true),
                 'variants.optionValues.option',
-            ])
-            ->first();
+            ]);
+
+        if ($store = $this->resolveStore()) {
+            $query->forStore($store);
+        }
+
+        $product = $query->first();
 
         if ($product === null) {
             throw new CommerceConnectionException(

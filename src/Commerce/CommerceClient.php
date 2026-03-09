@@ -12,8 +12,8 @@ use Daikazu\Flexicart\Commerce\DTOs\ProductData;
 use Daikazu\Flexicart\Commerce\Exceptions\CommerceAuthenticationException;
 use Daikazu\Flexicart\Commerce\Exceptions\CommerceConnectionException;
 use Daikazu\Flexicart\Contracts\CartInterface;
-use Daikazu\Flexicart\Enums\AddItemBehavior;
 use Daikazu\Flexicart\Contracts\CommerceClientInterface;
+use Daikazu\Flexicart\Enums\AddItemBehavior;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
@@ -28,14 +28,21 @@ final class CommerceClient implements CommerceClientInterface
     public function __construct(
         private readonly string $baseUrl,
         private readonly string $token,
+        private readonly ?string $storeId = null,
         private readonly int $timeout = 10,
         private readonly bool $cacheEnabled = true,
         private readonly int $cacheTtl = 300,
     ) {
-        $this->http = Http::baseUrl(rtrim($this->baseUrl, '/'))
+        $http = Http::baseUrl(rtrim($this->baseUrl, '/'))
             ->withToken($this->token)
             ->timeout($this->timeout)
             ->acceptJson();
+
+        if ($this->storeId !== null) {
+            $http = $http->withHeaders(['X-Store-Id' => $this->storeId]);
+        }
+
+        $this->http = $http;
     }
 
     /**
@@ -166,7 +173,11 @@ final class CommerceClient implements CommerceClientInterface
             return $fetcher();
         }
 
-        $cacheKey = 'flexicart:commerce:' . md5($path . serialize($query));
+        $prefix = $this->storeId !== null
+            ? "flexicart:commerce:{$this->storeId}:"
+            : 'flexicart:commerce:';
+
+        $cacheKey = $prefix . md5($path . serialize($query));
 
         return Cache::remember($cacheKey, $this->cacheTtl, $fetcher);
     }

@@ -86,7 +86,12 @@ final class CartServiceProvider extends PackageServiceProvider
                         );
                     }
 
-                    return new \Daikazu\Flexicart\Commerce\LocalCommerceDriver;
+                    /** @var \Illuminate\Config\Repository $config */
+                    $config = $app['config'];
+
+                    return new \Daikazu\Flexicart\Commerce\LocalCommerceDriver(
+                        storeId: $config->get('flexicart.commerce.store_id'),
+                    );
                 }
 
                 /** @var \Illuminate\Config\Repository $config */
@@ -95,6 +100,7 @@ final class CartServiceProvider extends PackageServiceProvider
                 return new CommerceClient(
                     baseUrl: (string) $config->get('flexicart.commerce.base_url', ''),
                     token: (string) $config->get('flexicart.commerce.token', ''),
+                    storeId: $config->get('flexicart.commerce.store_id'),
                     timeout: (int) $config->get('flexicart.commerce.timeout', 10),
                     cacheEnabled: (bool) $config->get('flexicart.commerce.cache.enabled', true),
                     cacheTtl: (int) $config->get('flexicart.commerce.cache.ttl', 300),
