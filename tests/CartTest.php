@@ -11,6 +11,7 @@ use Daikazu\Flexicart\Exceptions\CartException;
 use Daikazu\Flexicart\Price;
 use Daikazu\Flexicart\Tests\MockStorage;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Event;
 
 describe('Cart', function (): void {
     beforeEach(function (): void {
@@ -171,6 +172,105 @@ describe('Cart', function (): void {
 
                 $attributes = $this->cart->item('product1')->attributes->toArray();
                 expect($attributes)->toBe(['color' => 'red', 'size' => 'large']);
+            });
+
+            test('adds item as new line when behavior is New and ID exists', function (): void {
+                $item = [
+                    'id'       => 'product1',
+                    'name'     => 'Test Product',
+                    'price'    => 10.00,
+                    'quantity' => 1,
+                ];
+
+                $this->cart->addItem($item);
+                $this->cart->addItem($item, \Daikazu\Flexicart\Enums\AddItemBehavior::New);
+
+                expect($this->cart->items())->toHaveCount(2)
+                    ->and($this->cart->item('product1'))->not->toBeNull()
+                    ->and($this->cart->item('product1:1'))->not->toBeNull()
+                    ->and($this->cart->item('product1')->quantity)->toBe(1)
+                    ->and($this->cart->item('product1:1')->quantity)->toBe(1);
+            });
+
+            test('increments suffix for multiple new line items', function (): void {
+                $item = [
+                    'id'       => 'product1',
+                    'name'     => 'Test Product',
+                    'price'    => 10.00,
+                    'quantity' => 1,
+                ];
+
+                $this->cart->addItem($item);
+                $this->cart->addItem($item, \Daikazu\Flexicart\Enums\AddItemBehavior::New);
+                $this->cart->addItem($item, \Daikazu\Flexicart\Enums\AddItemBehavior::New);
+
+                expect($this->cart->items())->toHaveCount(3)
+                    ->and($this->cart->item('product1'))->not->toBeNull()
+                    ->and($this->cart->item('product1:1'))->not->toBeNull()
+                    ->and($this->cart->item('product1:2'))->not->toBeNull();
+            });
+
+            test('adds item normally when behavior is New and ID does not exist', function (): void {
+                $item = [
+                    'id'       => 'product1',
+                    'name'     => 'Test Product',
+                    'price'    => 10.00,
+                    'quantity' => 1,
+                ];
+
+                $this->cart->addItem($item, \Daikazu\Flexicart\Enums\AddItemBehavior::New);
+
+                expect($this->cart->items())->toHaveCount(1)
+                    ->and($this->cart->item('product1'))->not->toBeNull();
+            });
+
+            test('uses config default when behavior is null', function (): void {
+                config(['flexicart.add_item_behavior' => 'new']);
+
+                $item = [
+                    'id'       => 'product1',
+                    'name'     => 'Test Product',
+                    'price'    => 10.00,
+                    'quantity' => 1,
+                ];
+
+                $this->cart->addItem($item);
+                $this->cart->addItem($item);
+
+                expect($this->cart->items())->toHaveCount(2);
+            });
+
+            test('per-call behavior overrides config default', function (): void {
+                config(['flexicart.add_item_behavior' => 'new']);
+
+                $item = [
+                    'id'       => 'product1',
+                    'name'     => 'Test Product',
+                    'price'    => 10.00,
+                    'quantity' => 1,
+                ];
+
+                $this->cart->addItem($item);
+                $this->cart->addItem($item, \Daikazu\Flexicart\Enums\AddItemBehavior::Update);
+
+                expect($this->cart->items())->toHaveCount(1)
+                    ->and($this->cart->item('product1')->quantity)->toBe(2);
+            });
+
+            test('dispatches ItemAdded event for new line item', function (): void {
+                Event::fake();
+
+                $item = [
+                    'id'       => 'product1',
+                    'name'     => 'Test Product',
+                    'price'    => 10.00,
+                    'quantity' => 1,
+                ];
+
+                $this->cart->addItem($item);
+                $this->cart->addItem($item, \Daikazu\Flexicart\Enums\AddItemBehavior::New);
+
+                Event::assertDispatched(\Daikazu\Flexicart\Events\ItemAdded::class, 2);
             });
         });
 

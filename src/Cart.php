@@ -163,14 +163,32 @@ final class Cart implements CartInterface
      */
     public function addItem(array | CartItem $item, ?AddItemBehavior $behavior = null): self
     {
+        $behavior ??= AddItemBehavior::tryFrom((string) config('flexicart.add_item_behavior', 'update'))
+            ?? AddItemBehavior::Update;
+
         if ($item instanceof CartItem) {
-            $existingItem = $this->items->get((string) $item->id);
+            $itemId = (string) $item->id;
+
+            if ($behavior === AddItemBehavior::New && $this->items->has($itemId)) {
+                $itemId = $this->nextAvailableId($itemId);
+                $item = new CartItem([
+                    'id'         => $itemId,
+                    'name'       => $item->name,
+                    'price'      => $item->unitPrice(),
+                    'quantity'   => $item->quantity,
+                    'taxable'    => $item->taxable,
+                    'attributes' => $item->attributes,
+                    'conditions' => $item->conditions,
+                ]);
+            }
+
+            $existingItem = $this->items->get($itemId);
             $oldQuantity = $existingItem?->quantity;
 
-            $this->items->put((string) $item->id, $item);
+            $this->items->put($itemId, $item);
             $this->persist();
 
-            if ($oldQuantity !== null) {
+            if ($oldQuantity !== null && $behavior === AddItemBehavior::Update) {
                 $this->dispatchEvent(new ItemQuantityUpdated($this->id(), $item, $oldQuantity, $item->quantity));
             } else {
                 $this->dispatchEvent(new ItemAdded($this->id(), $item));
@@ -191,16 +209,24 @@ final class Cart implements CartInterface
             $itemId = $item['id'];
             $itemIdString = is_string($itemId) || is_int($itemId) ? (string) $itemId : '';
 
+            if ($behavior === AddItemBehavior::New && $this->items->has($itemIdString)) {
+                $itemIdString = $this->nextAvailableId($itemIdString);
+                $item['id'] = $itemIdString;
+            }
+
             $existingItem = $this->items->get($itemIdString);
             $oldQuantity = $existingItem?->quantity;
 
-            $item = $this->updateExistingItem($item);
+            if ($behavior === AddItemBehavior::Update) {
+                $item = $this->updateExistingItem($item);
+            }
+
             $cartItem = CartItem::make($item);
 
             $this->items->put($itemIdString, $cartItem);
             $this->persist();
 
-            if ($oldQuantity !== null) {
+            if ($oldQuantity !== null && $behavior === AddItemBehavior::Update) {
                 $this->dispatchEvent(new ItemQuantityUpdated($this->id(), $cartItem, $oldQuantity, $cartItem->quantity));
             } else {
                 $this->dispatchEvent(new ItemAdded($this->id(), $cartItem));
@@ -879,6 +905,20 @@ final class Cart implements CartInterface
         }
 
         return $item;
+    }
+
+    /**
+     * Find the next available suffixed ID for a new line item.
+     */
+    private function nextAvailableId(string $baseId): string
+    {
+        $suffix = 1;
+
+        while ($this->items->has("{$baseId}:{$suffix}")) {
+            $suffix++;
+        }
+
+        return "{$baseId}:{$suffix}";
     }
 
     /**
