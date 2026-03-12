@@ -41,7 +41,7 @@ final class LocalCommerceDriver implements CommerceClientInterface
 
         $query = \Daikazu\FlexiCommerce\Models\Product::query()
             ->where('status', \Daikazu\FlexiCommerce\Enums\ProductStatus::Active)
-            ->with('prices')
+            ->with(['prices', 'media'])
             ->orderBy('name');
 
         if ($store = $this->resolveStore()) {
@@ -83,9 +83,8 @@ final class LocalCommerceDriver implements CommerceClientInterface
                 'variants.media',
                 'addonGroups'       => fn ($q) => $q->wherePivot('is_active', true),
                 'addonGroups.items' => fn ($q) => $q->where('is_active', true),
-                'addonGroups.items.addon',
-                'addonGroups.items.modifiers.prices',
-                'addonGroups.items.modifiers.priceTiers.prices',
+                'addonGroups.items.addon.modifiers.prices',
+                'addonGroups.items.addon.modifiers.priceTiers.prices',
                 'media',
             ]);
 
@@ -409,7 +408,10 @@ final class LocalCommerceDriver implements CommerceClientInterface
             'status'      => $product->status?->value,
             'type'        => $product->type?->value,
             'meta'        => $product->meta ?? [],
-            'prices'      => $product->prices->map(fn ($p) => $this->priceToArray($p))->all(),
+            'image_urls'  => method_exists($product, 'getMedia')
+                ? $product->getMedia('images')->map(fn ($m) => $m->getUrl())->all()
+                : [],
+            'prices' => $product->prices->map(fn ($p) => $this->priceToArray($p))->all(),
         ];
     }
 
@@ -570,7 +572,7 @@ final class LocalCommerceDriver implements CommerceClientInterface
                 'is_free_eligible' => $item->is_free_eligible,
                 'sort_order'       => $item->sort_order,
                 'meta'             => $item->meta,
-                'modifiers'        => $item->modifiers->map(fn ($m) => [
+                'modifiers'        => $item->addon->modifiers->map(fn ($m) => [
                     'id'                 => $m->id,
                     'modifier_type'      => $m->modifier_type?->value,
                     'applies_to'         => $m->applies_to?->value,
