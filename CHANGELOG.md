@@ -2,6 +2,10 @@
 
 All notable changes to `flexicart` will be documented in this file.
 
+## v1.2.0 - 2026-03-17
+
+Add Laravel 13 support
+
 ## v1.1.0 - 2025-12-28
 
 ### What's Changed
