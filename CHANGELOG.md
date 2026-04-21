@@ -2,6 +2,18 @@
 
 All notable changes to `flexicart` will be documented in this file.
 
+## v1.2.1 - 2026-04-21
+
+### Bug Fixes
+
+- Fixed tax calculation to respect the `taxable` flag on conditions. Previously, conditions marked `taxable=false` (like non-taxable shipping) were still being included in the tax base, and conditions marked `taxable=true` were being double-counted. This also applied to item-level conditions. The `taxable` flag is now the single source of truth: only conditions with `taxable=true` contribute to the tax base, by their full adjustment amount. (#2)
+
+### Behavior Change
+
+If you previously relied on discounts reducing the tax base proportionally without explicitly marking them `taxable=true`, you'll need to set `taxable: true` on those conditions to preserve that behavior.
+
+**Full Changelog**: https://github.com/daikazu/flexicart/compare/v1.2.0...v1.2.1
+
 ## v1.2.0 - 2026-03-17
 
 Add Laravel 13 support
