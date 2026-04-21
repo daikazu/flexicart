@@ -31,13 +31,16 @@ final class LocalCommerceDriver implements CommerceClientInterface
      * List active products (paginated).
      *
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, ProductData>
      *
      * @throws CommerceConnectionException
      */
     public function products(array $filters = []): LengthAwarePaginator
     {
-        $perPage = min((int) ($filters['per_page'] ?? 15), 100);
-        $page = (int) ($filters['page'] ?? 1);
+        $perPageRaw = $filters['per_page'] ?? 15;
+        $pageRaw = $filters['page'] ?? 1;
+        $perPage = min(is_numeric($perPageRaw) ? (int) $perPageRaw : 15, 100);
+        $page = is_numeric($pageRaw) ? (int) $pageRaw : 1;
 
         $query = \Daikazu\FlexiCommerce\Models\Product::query()
             ->where('status', \Daikazu\FlexiCommerce\Enums\ProductStatus::Active)
@@ -50,10 +53,12 @@ final class LocalCommerceDriver implements CommerceClientInterface
 
         $paginator = $query->paginate($perPage, ['*'], 'page', $page);
 
+        /** @var list<ProductData> $items */
         $items = $paginator->getCollection()
-            ->map(fn ($product) => ProductData::fromArray($this->productListToArray($product)))
+            ->map(fn (\Daikazu\FlexiCommerce\Models\Product $product) => ProductData::fromArray($this->productListToArray($product)))
             ->all();
 
+        /** @var LengthAwarePaginator<int, ProductData> */
         return new LengthAwarePaginator(
             items: $items,
             total: $paginator->total(),
@@ -107,13 +112,16 @@ final class LocalCommerceDriver implements CommerceClientInterface
      * List active collections (paginated).
      *
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, CollectionData>
      *
      * @throws CommerceConnectionException
      */
     public function collections(array $filters = []): LengthAwarePaginator
     {
-        $perPage = min((int) ($filters['per_page'] ?? 15), 100);
-        $page = (int) ($filters['page'] ?? 1);
+        $perPageRaw = $filters['per_page'] ?? 15;
+        $pageRaw = $filters['page'] ?? 1;
+        $perPage = min(is_numeric($perPageRaw) ? (int) $perPageRaw : 15, 100);
+        $page = is_numeric($pageRaw) ? (int) $pageRaw : 1;
 
         $query = \Daikazu\FlexiCommerce\Models\ProductCollection::query()
             ->where('is_active', true)
@@ -122,10 +130,12 @@ final class LocalCommerceDriver implements CommerceClientInterface
 
         $paginator = $query->paginate($perPage, ['*'], 'page', $page);
 
+        /** @var list<CollectionData> $items */
         $items = $paginator->getCollection()
-            ->map(fn ($collection) => CollectionData::fromArray($this->collectionToArray($collection)))
+            ->map(fn (\Daikazu\FlexiCommerce\Models\ProductCollection $collection) => CollectionData::fromArray($this->collectionToArray($collection)))
             ->all();
 
+        /** @var LengthAwarePaginator<int, CollectionData> */
         return new LengthAwarePaginator(
             items: $items,
             total: $paginator->total(),
@@ -171,14 +181,20 @@ final class LocalCommerceDriver implements CommerceClientInterface
     {
         $product = $this->findActiveProduct($slug);
 
+        $variantIdRaw = $config['variant_id'] ?? null;
+        $quantityRaw = $config['quantity'] ?? 1;
+        $currencyRaw = $config['currency'] ?? 'USD';
+        /** @var array<int, array<string, mixed>> $addonSelections */
+        $addonSelections = is_array($config['addon_selections'] ?? null) ? $config['addon_selections'] : [];
+
         try {
             /** @var array<string, mixed> $result */
             $result = (new \Daikazu\FlexiCommerce\Actions\Pricing\ResolvePriceAction)->handle(
                 product: $product,
-                variantId: isset($config['variant_id']) ? (int) $config['variant_id'] : null,
-                quantity: (int) ($config['quantity'] ?? 1),
-                currency: strtoupper((string) ($config['currency'] ?? 'USD')),
-                addonSelections: $config['addon_selections'] ?? [],
+                variantId: $variantIdRaw !== null && is_numeric($variantIdRaw) ? (int) $variantIdRaw : null,
+                quantity: is_numeric($quantityRaw) ? (int) $quantityRaw : 1,
+                currency: strtoupper(is_string($currencyRaw) ? $currencyRaw : 'USD'),
+                addonSelections: $addonSelections,
             );
         } catch (InvalidArgumentException $e) {
             throw new CommerceConnectionException($e->getMessage(), 0, $e);
@@ -198,14 +214,20 @@ final class LocalCommerceDriver implements CommerceClientInterface
     {
         $product = $this->findActiveProduct($slug);
 
+        $variantIdRaw = $config['variant_id'] ?? null;
+        $quantityRaw = $config['quantity'] ?? 1;
+        $currencyRaw = $config['currency'] ?? 'USD';
+        /** @var array<int, array<string, mixed>> $addonSelections */
+        $addonSelections = is_array($config['addon_selections'] ?? null) ? $config['addon_selections'] : [];
+
         try {
             /** @var array<string, mixed> $result */
             $result = (new \Daikazu\FlexiCommerce\Actions\Pricing\ResolvePriceAction)->handle(
                 product: $product,
-                variantId: isset($config['variant_id']) ? (int) $config['variant_id'] : null,
-                quantity: (int) ($config['quantity'] ?? 1),
-                currency: strtoupper((string) ($config['currency'] ?? 'USD')),
-                addonSelections: $config['addon_selections'] ?? [],
+                variantId: $variantIdRaw !== null && is_numeric($variantIdRaw) ? (int) $variantIdRaw : null,
+                quantity: is_numeric($quantityRaw) ? (int) $quantityRaw : 1,
+                currency: strtoupper(is_string($currencyRaw) ? $currencyRaw : 'USD'),
+                addonSelections: $addonSelections,
             );
         } catch (InvalidArgumentException $e) {
             throw new CommerceConnectionException($e->getMessage(), 0, $e);
@@ -259,10 +281,12 @@ final class LocalCommerceDriver implements CommerceClientInterface
 
         /** @var int|false $storePk */
         $storePk = Cache::remember($cacheKey, 60, function (): int | false {
-            return \Daikazu\FlexiCommerce\Models\Store::query()
+            $key = \Daikazu\FlexiCommerce\Models\Store::query()
                 ->where('store_id', $this->storeId)
                 ->where('is_active', true)
                 ->first()?->getKey() ?? false;
+
+            return is_int($key) ? $key : false;
         });
 
         if ($storePk === false) {
@@ -285,9 +309,9 @@ final class LocalCommerceDriver implements CommerceClientInterface
     }
 
     /**
-     * @return object The Product model instance
+     * @return \Daikazu\FlexiCommerce\Models\Product The Product model instance
      */
-    private function findActiveProduct(string $slug): object
+    private function findActiveProduct(string $slug): \Daikazu\FlexiCommerce\Models\Product
     {
         $query = \Daikazu\FlexiCommerce\Models\Product::query()
             ->where('slug', $slug)
@@ -318,12 +342,19 @@ final class LocalCommerceDriver implements CommerceClientInterface
      * @param  array<string, mixed>  $result
      * @return array<string, mixed>
      */
-    private function toCartItem(array $result, object $product): array
+    private function toCartItem(array $result, \Daikazu\FlexiCommerce\Models\Product $product): array
     {
-        $sku = $result['variant']['sku'] ?? $product->slug;
-        $variantName = $result['variant']['name'] ?? null;
+        /** @var array<string, mixed>|null $variantResult */
+        $variantResult = is_array($result['variant'] ?? null) ? $result['variant'] : null;
+        $skuRaw = $variantResult['sku'] ?? $product->slug;
+        $sku = is_string($skuRaw) ? $skuRaw : $product->slug;
+        $variantNameRaw = $variantResult['name'] ?? null;
+        $variantName = is_string($variantNameRaw) ? $variantNameRaw : null;
 
-        $addonParts = collect($result['addons'])
+        /** @var array<int, array<string, mixed>> $addonsResult */
+        $addonsResult = is_array($result['addons'] ?? null) ? $result['addons'] : [];
+
+        $addonParts = collect($addonsResult)
             ->groupBy('group_code')
             ->map(fn ($items, $group) => $group . '=' . $items->pluck('addon_code')->unique()->implode('+'))
             ->implode(':');
@@ -336,55 +367,68 @@ final class LocalCommerceDriver implements CommerceClientInterface
 
         // Build option_values map from variant (pre-loaded by findActiveProduct)
         $optionValues = [];
-        if ($result['variant'] !== null) {
-            $variant = $product->variants->firstWhere('id', $result['variant']['id']);
+        if ($variantResult !== null) {
+            $variantIdRaw = $variantResult['id'] ?? null;
+            $variant = is_int($variantIdRaw) ? $product->variants->firstWhere('id', $variantIdRaw) : null;
 
             if ($variant !== null) {
-                foreach ($variant->optionValues as $ov) {
-                    $optionValues[$ov->option->code] = $ov->name;
+                /** @var iterable<int, object> $optionValuesRelation */
+                $optionValuesRelation = $variant->optionValues ?? [];
+                foreach ($optionValuesRelation as $ov) {
+                    /** @var string $optionCode */
+                    $optionCode = $ov->option->code ?? '';
+                    $optionValues[$optionCode] = $ov->name;
                 }
             }
         }
 
         // Build conditions from addon modifiers
         $conditions = [];
-        foreach ($result['addons'] as $i => $addon) {
-            if ($addon['is_free']) {
+        foreach ($addonsResult as $i => $addon) {
+            if ($addon['is_free'] ?? false) {
                 continue;
             }
 
-            $value = (float) $addon['unit_amount'];
+            $unitAmountRaw = $addon['unit_amount'] ?? 0;
+            $value = is_numeric($unitAmountRaw) ? (float) $unitAmountRaw : 0.0;
             if ($value == 0.0) {
                 continue;
             }
 
-            $appliesTo = $addon['applies_to'] === \Daikazu\FlexiCommerce\Enums\ModifierAppliesTo::Line->value
+            $appliesToRaw = $addon['applies_to'] ?? '';
+            $appliesTo = $appliesToRaw === \Daikazu\FlexiCommerce\Enums\ModifierAppliesTo::Line->value
                 ? 'subtotal'
                 : 'item';
 
+            $addonNameRaw = $addon['name'] ?? '';
             $conditions[] = [
-                'name'       => "Addon: {$addon['name']}",
+                'name'       => "Addon: " . (is_string($addonNameRaw) ? $addonNameRaw : ''),
                 'value'      => $value,
                 'type'       => 'fixed',
                 'target'     => $appliesTo,
                 'attributes' => [
-                    'addon_code'  => $addon['addon_code'],
-                    'group_code'  => $addon['group_code'],
-                    'modifier_id' => $addon['modifier_id'],
+                    'addon_code'  => $addon['addon_code'] ?? null,
+                    'group_code'  => $addon['group_code'] ?? null,
+                    'modifier_id' => $addon['modifier_id'] ?? null,
                 ],
                 'order'   => $i,
                 'taxable' => true,
             ];
         }
 
+        $unitPriceRaw = $result['unit_price'] ?? 0;
+        $quantityRaw = $result['quantity'] ?? 1;
+        $productSlugRaw = $result['product_slug'] ?? '';
+        $variantIdForAttr = $variantResult !== null ? ($variantResult['id'] ?? null) : null;
+
         return [
             'id'         => $cartId,
             'name'       => $name,
-            'price'      => (float) $result['unit_price'],
-            'quantity'   => $result['quantity'],
+            'price'      => is_numeric($unitPriceRaw) ? (float) $unitPriceRaw : 0.0,
+            'quantity'   => is_numeric($quantityRaw) ? (int) $quantityRaw : 1,
             'attributes' => [
-                'product_slug'  => $result['product_slug'],
-                'variant_id'    => $result['variant']['id'] ?? null,
+                'product_slug'  => is_string($productSlugRaw) ? $productSlugRaw : '',
+                'variant_id'    => $variantIdForAttr,
                 'sku'           => $sku,
                 'option_values' => $optionValues,
                 'source'        => 'flexi-commerce',
@@ -399,7 +443,7 @@ final class LocalCommerceDriver implements CommerceClientInterface
      *
      * @return array<string, mixed>
      */
-    private function productListToArray(object $product): array
+    private function productListToArray(\Daikazu\FlexiCommerce\Models\Product $product): array
     {
         return [
             'slug'        => $product->slug,
@@ -420,7 +464,7 @@ final class LocalCommerceDriver implements CommerceClientInterface
      *
      * @return array<string, mixed>
      */
-    private function productToArray(object $product): array
+    private function productToArray(\Daikazu\FlexiCommerce\Models\Product $product): array
     {
         $imageUrls = [];
         $digitalAssets = [];
@@ -592,7 +636,7 @@ final class LocalCommerceDriver implements CommerceClientInterface
     /**
      * @return array<string, mixed>
      */
-    private function collectionToArray(object $collection): array
+    private function collectionToArray(\Daikazu\FlexiCommerce\Models\ProductCollection $collection): array
     {
         return [
             'slug'        => $collection->slug,

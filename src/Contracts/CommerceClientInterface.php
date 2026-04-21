@@ -16,6 +16,7 @@ interface CommerceClientInterface
 {
     /**
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, ProductData>
      */
     public function products(array $filters = []): LengthAwarePaginator;
 
@@ -23,6 +24,7 @@ interface CommerceClientInterface
 
     /**
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, CollectionData>
      */
     public function collections(array $filters = []): LengthAwarePaginator;
 

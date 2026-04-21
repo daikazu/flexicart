@@ -26,13 +26,23 @@ final readonly class CartItemData
     /** @param  array<string, mixed>  $data */
     public static function fromArray(array $data): self
     {
+        /** @var array<string, mixed> $attributes */
+        $attributes = is_array($data['attributes'] ?? null) ? $data['attributes'] : [];
+        /** @var array<int, array<string, mixed>> $conditions */
+        $conditions = is_array($data['conditions'] ?? null) ? $data['conditions'] : [];
+
+        $idRaw = $data['id'] ?? '';
+        $nameRaw = $data['name'] ?? '';
+        $priceRaw = $data['price'] ?? 0.0;
+        $quantityRaw = $data['quantity'] ?? 0;
+
         return new self(
-            id: $data['id'],
-            name: $data['name'],
-            price: (float) $data['price'],
-            quantity: (int) $data['quantity'],
-            attributes: $data['attributes'] ?? [],
-            conditions: $data['conditions'] ?? [],
+            id: is_string($idRaw) ? $idRaw : '',
+            name: is_string($nameRaw) ? $nameRaw : '',
+            price: is_float($priceRaw) ? $priceRaw : (is_int($priceRaw) ? (float) $priceRaw : (is_numeric($priceRaw) ? (float) $priceRaw : 0.0)),
+            quantity: is_int($quantityRaw) ? $quantityRaw : (is_numeric($quantityRaw) ? (int) $quantityRaw : 0),
+            attributes: $attributes,
+            conditions: $conditions,
             raw: $data,
         );
     }
