@@ -311,6 +311,83 @@ final class CartItem implements CartItemInterface
     }
 
     /**
+     * Calculate the portion of this item's subtotal that contributes to the tax base.
+     *
+     * Applies only conditions with taxable=true. If the item itself is non-taxable,
+     * returns zero.
+     *
+     * @throws MathException
+     * @throws PriceException
+     * @throws MoneyMismatchException
+     * @throws UnknownCurrencyException
+     */
+    public function taxableSubtotal(): Price
+    {
+        if (! $this->taxable) {
+            return new Price(0);
+        }
+
+        $compoundDiscounts = config('flexicart.compound_discounts', false);
+        $originalUnitPrice = $this->price;
+        $unitPrice = $originalUnitPrice;
+        $subtotalAdjustments = new Price(0);
+        $fixedSubtotalAdjustments = new Price(0);
+
+        $sortedConditions = $this->conditions
+            ->filter(fn (ConditionInterface $condition): bool => (bool) $condition->taxable)
+            ->sortBy(function (ConditionInterface $condition): array {
+                /** @var array<string, int> */
+                $targetPriorities = [
+                    ConditionTarget::ITEM->value     => 1,
+                    ConditionTarget::SUBTOTAL->value => 2,
+                ];
+
+                $targetValue = $condition->target->value;
+                $priority = is_string($targetValue) && isset($targetPriorities[$targetValue]) ? $targetPriorities[$targetValue] : 999;
+                $conditionValue = is_int($condition->value) || is_float($condition->value) ? $condition->value : 0;
+
+                return [$priority, $condition->order, -$conditionValue];
+            });
+
+        foreach ($sortedConditions as $condition) {
+            if ($condition->target === ConditionTarget::ITEM) {
+                if ($condition->type === ConditionType::PERCENTAGE) {
+                    $basePrice = $compoundDiscounts ? $unitPrice : $originalUnitPrice;
+                    $unitPrice = $unitPrice->plus($condition->calculate($basePrice));
+                } elseif ($condition->type === ConditionType::FIXED) {
+                    $unitPrice = $unitPrice->plus($condition->calculate());
+                }
+            }
+
+            if ($condition->target === ConditionTarget::SUBTOTAL) {
+                if ($condition->type === ConditionType::PERCENTAGE) {
+                    if ($compoundDiscounts) {
+                        $baseSubtotal = $unitPrice->multiplyBy($this->quantity)
+                            ->plus($subtotalAdjustments)
+                            ->plus($fixedSubtotalAdjustments);
+                    } else {
+                        $baseSubtotal = $unitPrice->multiplyBy($this->quantity);
+                    }
+
+                    $subtotalAdjustments = $subtotalAdjustments->plus($condition->calculate($baseSubtotal));
+                } elseif ($condition->type === ConditionType::FIXED) {
+                    $fixedSubtotalAdjustments = $fixedSubtotalAdjustments->plus($condition->calculate());
+                }
+            }
+        }
+
+        $taxableSubtotal = $unitPrice->multiplyBy($this->quantity)
+            ->plus($subtotalAdjustments)
+            ->plus($fixedSubtotalAdjustments);
+
+        if ($taxableSubtotal->toFloat() < 0) {
+            return new Price(0);
+        }
+
+        return $taxableSubtotal;
+    }
+
+    /**
      * Convert the item to an array.
      *
      * @throws MathException

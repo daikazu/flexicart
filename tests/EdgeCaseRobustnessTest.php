@@ -154,8 +154,7 @@ describe('CartItem Behavior', function (): void {
             expect($this->cart->total()->toFloat())->toBe(90.00);
         });
 
-        test('taxable ratio calculation precision', function (): void {
-            // This tests the float division in Cart::total() lines 539-540
+        test('taxable discount reduces tax base by full amount', function (): void {
             $this->cart->addItem([
                 'id'      => 'taxable',
                 'name'    => 'Taxable Item',
@@ -170,7 +169,6 @@ describe('CartItem Behavior', function (): void {
                 'taxable' => false,
             ]);
 
-            // Add a subtotal discount that's marked as taxable
             $discount = new PercentageCondition('Discount', -10.00);
             $discount->taxable = true;
 
@@ -179,17 +177,12 @@ describe('CartItem Behavior', function (): void {
             $this->cart->addCondition($discount);
             $this->cart->addCondition($tax);
 
-            // Subtotal = 33.33 + 66.67 = 100.00
-            // Taxable subtotal = 33.33
-            // Discount = -10% of 100 = -10.00
-            // Taxable portion of discount = 10.00 * (33.33/100) = 3.333
-            // Adjusted taxable = 33.33 - 3.333 = 29.997
-            // Tax = 10% of ~30 = ~3
-            // Total should be around 93
-
-            $total = $this->cart->total();
-            expect($total->toFloat())->toBeGreaterThan(92.00)
-                ->and($total->toFloat())->toBeLessThan(94.00);
+            // Subtotal = 100.00, taxable subtotal = 33.33
+            // Discount = -10% of 100 = -10.00 (taxable=true, reduces tax base by full amount)
+            // Adjusted tax base = 33.33 - 10.00 = 23.33
+            // Tax = 10% of 23.33 = 2.33
+            // Total = 100 - 10 + 2.33 = 92.33
+            expect($this->cart->total()->toFloat())->toBe(92.33);
         });
     });
 
