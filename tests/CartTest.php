@@ -845,7 +845,8 @@ describe('Cart', function (): void {
                 'taxable' => false,
             ]);
 
-            $discount = new PercentageCondition('Discount', -10); // 10% discount
+            // Discount is taxable=true, meaning it reduces the tax base.
+            $discount = new PercentageCondition('Discount', -10, taxable: true); // 10% discount, reduces tax base
             $tax = new PercentageTaxCondition('Tax', 8); // 8% tax on taxable items
 
             $this->cart->addCondition($discount);
@@ -858,8 +859,159 @@ describe('Cart', function (): void {
             expect($subtotal)->toBe(100.00)
                 ->and($taxableSubtotal)->toBe(80.00);
 
-            // Total should be: 100 - 10 (discount) + 6.4 (8% tax on taxable portion after discount) = 95.76
-            expect($total)->toBe(95.76);
+            // Total: 100 - 10 (discount) + 5.60 (8% tax on $80 - $10 taxable discount = $70) = 95.60
+            expect($total)->toBe(95.60);
+        });
+    });
+
+    describe('Taxable flag on conditions controls tax base inclusion', function (): void {
+        describe('Cart-level conditions', function (): void {
+            test('non-taxable fee condition is not included in tax base', function (): void {
+                $this->cart->addItem([
+                    'id'      => 'product1',
+                    'name'    => 'Taxable Product',
+                    'price'   => 100.00,
+                    'taxable' => true,
+                ]);
+
+                $shipping = new FixedCondition('Shipping', 10.00, taxable: false);
+                $tax = new PercentageTaxCondition('Tax', 10);
+
+                $this->cart->addCondition($shipping);
+                $this->cart->addCondition($tax);
+
+                // Tax base = $100 (items only, shipping not taxable)
+                // Tax = 10% of $100 = $10
+                // Total = $100 + $10 shipping + $10 tax = $120
+                expect($this->cart->total()->toFloat())->toBe(120.00);
+            });
+
+            test('taxable fee condition is included in tax base at full value', function (): void {
+                $this->cart->addItem([
+                    'id'      => 'product1',
+                    'name'    => 'Taxable Product',
+                    'price'   => 100.00,
+                    'taxable' => true,
+                ]);
+
+                $shipping = new FixedCondition('Shipping', 10.00, taxable: true);
+                $tax = new PercentageTaxCondition('Tax', 10);
+
+                $this->cart->addCondition($shipping);
+                $this->cart->addCondition($tax);
+
+                // Tax base = $100 items + $10 taxable shipping = $110
+                // Tax = 10% of $110 = $11
+                // Total = $100 + $10 shipping + $11 tax = $121
+                expect($this->cart->total()->toFloat())->toBe(121.00);
+            });
+
+            test('non-taxable discount condition does not reduce tax base', function (): void {
+                $this->cart->addItem([
+                    'id'      => 'product1',
+                    'name'    => 'Taxable Product',
+                    'price'   => 100.00,
+                    'taxable' => true,
+                ]);
+
+                $discount = new FixedCondition('Discount', -10.00, taxable: false);
+                $tax = new PercentageTaxCondition('Tax', 10);
+
+                $this->cart->addCondition($discount);
+                $this->cart->addCondition($tax);
+
+                // Tax base = $100 (discount has taxable=false, does not reduce base)
+                // Tax = 10% of $100 = $10
+                // Total = $100 - $10 discount + $10 tax = $100
+                expect($this->cart->total()->toFloat())->toBe(100.00);
+            });
+
+            test('taxable discount condition reduces tax base by full amount', function (): void {
+                $this->cart->addItem([
+                    'id'      => 'product1',
+                    'name'    => 'Taxable Product',
+                    'price'   => 100.00,
+                    'taxable' => true,
+                ]);
+
+                $discount = new FixedCondition('Discount', -10.00, taxable: true);
+                $tax = new PercentageTaxCondition('Tax', 10);
+
+                $this->cart->addCondition($discount);
+                $this->cart->addCondition($tax);
+
+                // Tax base = $100 - $10 (taxable discount reduces base) = $90
+                // Tax = 10% of $90 = $9
+                // Total = $100 - $10 discount + $9 tax = $99
+                expect($this->cart->total()->toFloat())->toBe(99.00);
+            });
+
+            test('non-taxable fee on cart with mixed taxable and non-taxable items does not affect tax base', function (): void {
+                $this->cart->addItem([
+                    'id'      => 'taxable1',
+                    'name'    => 'Taxable Product',
+                    'price'   => 80.00,
+                    'taxable' => true,
+                ]);
+
+                $this->cart->addItem([
+                    'id'      => 'nontaxable1',
+                    'name'    => 'Non-taxable Product',
+                    'price'   => 20.00,
+                    'taxable' => false,
+                ]);
+
+                $shipping = new FixedCondition('Shipping', 10.00, taxable: false);
+                $tax = new PercentageTaxCondition('Tax', 10);
+
+                $this->cart->addCondition($shipping);
+                $this->cart->addCondition($tax);
+
+                // Tax base = $80 (only taxable item, shipping not in base)
+                // Tax = 10% of $80 = $8
+                // Total = $100 + $10 shipping + $8 tax = $118
+                expect($this->cart->total()->toFloat())->toBe(118.00);
+            });
+        });
+
+        describe('Item-level conditions', function (): void {
+            test('non-taxable item condition is not included in tax base', function (): void {
+                $item = new CartItem([
+                    'id'      => 'product1',
+                    'name'    => 'Taxable Product',
+                    'price'   => 100.00,
+                    'taxable' => true,
+                ]);
+                $item->addCondition(new FixedCondition('Add-on', 10.00, \Daikazu\Flexicart\Enums\ConditionTarget::ITEM, taxable: false));
+
+                $this->cart->addItem($item);
+                $this->cart->addCondition(new PercentageTaxCondition('Tax', 10));
+
+                // Item subtotal = $110 (includes non-taxable add-on)
+                // Tax base = $100 (add-on excluded because taxable=false)
+                // Tax = 10% of $100 = $10
+                // Total = $110 + $10 = $120
+                expect($this->cart->total()->toFloat())->toBe(120.00);
+            });
+
+            test('taxable item condition is included in tax base', function (): void {
+                $item = new CartItem([
+                    'id'      => 'product1',
+                    'name'    => 'Taxable Product',
+                    'price'   => 100.00,
+                    'taxable' => true,
+                ]);
+                $item->addCondition(new FixedCondition('Add-on', 10.00, \Daikazu\Flexicart\Enums\ConditionTarget::ITEM, taxable: true));
+
+                $this->cart->addItem($item);
+                $this->cart->addCondition(new PercentageTaxCondition('Tax', 10));
+
+                // Item subtotal = $110 (includes taxable add-on)
+                // Tax base = $110 (add-on included because taxable=true)
+                // Tax = 10% of $110 = $11
+                // Total = $110 + $11 = $121
+                expect($this->cart->total()->toFloat())->toBe(121.00);
+            });
         });
     });
 

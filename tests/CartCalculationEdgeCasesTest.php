@@ -225,15 +225,15 @@ describe('Cart Calculation Edge Cases and Complex Scenarios', function (): void 
             $this->cart->addCondition($globalDiscount);
             $this->cart->addCondition($salesTax);
 
-            // Add item-specific condition
-            $itemDiscount = new FixedCondition('Item Discount', -50.00);
+            // Add item-specific condition marked taxable=true so it reduces the tax base.
+            $itemDiscount = new FixedCondition('Item Discount', -50.00, taxable: true);
             $this->cart->addItemCondition('expensive1', $itemDiscount);
 
             // Item calculations:
             // regular1: 25 * 2 = 50 (taxable)
             // nontax1: 15 * 1 = 15 (non-taxable)
             // free1: 0 * 3 = 0 (taxable)
-            // expensive1: (999.99 - 50) * 1 = 949.99 (taxable, with item discount)
+            // expensive1: (999.99 - 50) * 1 = 949.99 (taxable, with taxable item discount)
             // Subtotal with item conditions: 50 + 15 + 0 + 949.99 = 1014.99
             $subtotal = $this->cart->subtotal()->toFloat();
             $taxableSubtotal = $this->cart->getTaxableSubtotal()->toFloat(); // 50 + 0 + 949.99 = 999.99
@@ -435,7 +435,8 @@ describe('Cart Calculation Edge Cases and Complex Scenarios', function (): void 
                 'taxable' => true,
             ]);
 
-            $discount = new PercentageCondition('Discount', -20);
+            // Discount is marked taxable=true so it reduces the tax base.
+            $discount = new PercentageCondition('Discount', -20, taxable: true);
             $tax = new PercentageTaxCondition('Tax', 10);
 
             $this->cart->addCondition($discount);

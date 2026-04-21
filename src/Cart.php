@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Daikazu\Flexicart;
 
 use Brick\Math\Exception\MathException;
-use Brick\Math\RoundingMode;
 use Brick\Money\Exception\MoneyMismatchException;
 use Brick\Money\Exception\UnknownCurrencyException;
 use Daikazu\Flexicart\Conditions\Condition;
@@ -455,7 +454,7 @@ final class Cart implements CartInterface
     }
 
     /**
-     * Get the subtotal of only taxable cart items
+     * Get the subtotal of only taxable cart items, counting only taxable item conditions.
      *
      * @throws PriceException
      * @throws UnknownCurrencyException
@@ -467,11 +466,7 @@ final class Cart implements CartInterface
         $taxableSubtotal = Price::zero();
 
         $this->items->each(function (CartItem $item) use (&$taxableSubtotal): void {
-
-            // check if the item has the taxable attribute
-            if ($item->taxable) {
-                $taxableSubtotal = $taxableSubtotal->plus($item->subtotal());
-            }
+            $taxableSubtotal = $taxableSubtotal->plus($item->taxableSubtotal());
         });
 
         return $taxableSubtotal;
@@ -676,43 +671,33 @@ final class Cart implements CartInterface
     {
         $compoundDiscounts = config('flexicart.compound_discounts', false);
         $subtotal = $this->subtotal(); // subtotal of all items
-        $taxableSubtotal = $this->getTaxableSubtotal(); // subtotal of items that are taxable to use when calculating conditions that have a target taxable
         $originalSubtotal = $subtotal;
-        $originalTaxableSubtotal = $taxableSubtotal;
         $total = $subtotal;
-        $currentTaxableSubtotal = $taxableSubtotal; // Track the current taxable subtotal after applying conditions
-        $taxableAdjustments = Price::zero(); // Track adjustments from taxable subtotal conditions
+        // Tax base starts from items whose taxable flag is true, including only their taxable conditions.
+        $taxableBase = $this->getTaxableSubtotal();
 
-        // Sort conditions by target priority and type (taxable conditions last)
+        // Sort conditions by target priority (SUBTOTAL before TAXABLE)
         $sortedConditions = $this->conditions->sortBy(function (ConditionInterface $condition): array {
-            // Define target priority (lower number = higher priority)
-
             /** @var array<string, int> */
             $targetPriorities = [
-                ConditionTarget::SUBTOTAL->value => 1, // Apply to subtotal first (before taxes)
-                ConditionTarget::TAXABLE->value  => 2, // Apply to taxable items
+                ConditionTarget::SUBTOTAL->value => 1,
+                ConditionTarget::TAXABLE->value  => 2,
             ];
 
             $targetValue = $condition->target->value;
             $priority = is_string($targetValue) && isset($targetPriorities[$targetValue]) ? $targetPriorities[$targetValue] : 999;
 
             return [
-                $priority, // Default to end if unknown target
-                $condition->taxable ? 2 : 1, // Tax conditions last within each target group
+                $priority,
                 $condition->order,
-                is_int($condition->value) || is_float($condition->value) ? -$condition->value : 0, // Negative for descending order by value
+                is_int($condition->value) || is_float($condition->value) ? -$condition->value : 0,
             ];
         });
 
-        $sortedConditions->each(function (ConditionInterface $condition) use (&$total, &$currentTaxableSubtotal, &$taxableAdjustments, $originalSubtotal, $originalTaxableSubtotal, $compoundDiscounts): void {
-
-            // Use original values or current values based on compound_discounts setting
+        $sortedConditions->each(function (ConditionInterface $condition) use (&$total, &$taxableBase, $originalSubtotal, $compoundDiscounts): void {
             $baseSubtotal = $compoundDiscounts ? $total : $originalSubtotal;
-            // For taxable conditions, use the current taxable subtotal plus any taxable adjustments
-            $baseTaxableSubtotal = $currentTaxableSubtotal->plus($taxableAdjustments);
 
             if ($condition->target === ConditionTarget::SUBTOTAL) {
-                // Apply condition to the subtotal
                 if ($condition->type === ConditionType::PERCENTAGE) {
                     $adjustment = $condition->calculate($baseSubtotal);
                 } else {
@@ -721,32 +706,13 @@ final class Cart implements CartInterface
 
                 $total = $total->plus($adjustment);
 
-                // If this condition is taxable and affects the subtotal
+                // Only taxable conditions contribute to the tax base.
                 if ($condition->taxable) {
-                    // Track the taxable portion of this adjustment
-                    if ($originalTaxableSubtotal->toFloat() > 0 && $originalSubtotal->toFloat() > 0) {
-                        $taxableRatio = $originalTaxableSubtotal->toFloat() / $originalSubtotal->toFloat();
-                        $taxableAdjustment = $adjustment->multiplyBy($taxableRatio, RoundingMode::HALF_UP);
-                        $taxableAdjustments = $taxableAdjustments->plus($taxableAdjustment);
-                    } else {
-                        // If all items are taxable or no taxable items, use full adjustment
-                        $taxableAdjustments = $taxableAdjustments->plus($adjustment);
-                    }
-                }
-
-                // Update the current taxable subtotal proportionally for all subtotal conditions
-                if ($originalTaxableSubtotal->toFloat() > 0 && $originalSubtotal->toFloat() > 0) {
-                    $taxableRatio = $originalTaxableSubtotal->toFloat() / $originalSubtotal->toFloat();
-                    $taxableAdjustment = $adjustment->multiplyBy($taxableRatio, RoundingMode::HALF_UP);
-                    $currentTaxableSubtotal = $currentTaxableSubtotal->plus($taxableAdjustment);
+                    $taxableBase = $taxableBase->plus($adjustment);
                 }
             } elseif ($condition->target === ConditionTarget::TAXABLE) {
-                // For tax conditions, use the current taxable subtotal that includes effects of other conditions
-                // plus any taxable adjustments from subtotal conditions
                 if ($condition->type === ConditionType::PERCENTAGE) {
-                    $adjustment = $condition->calculate($baseTaxableSubtotal);
-                } elseif ($condition->type === ConditionType::FIXED) {
-                    $adjustment = $condition->calculate();
+                    $adjustment = $condition->calculate($taxableBase);
                 } else {
                     $adjustment = $condition->calculate();
                 }
