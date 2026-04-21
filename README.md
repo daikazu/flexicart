@@ -31,6 +31,7 @@ A flexible shopping cart package for Laravel with support for session or databas
   - [Adding Conditions](#adding-conditions)
   - [Removing Conditions](#removing-conditions)
   - [Non-Taxable Items](#marking-items-as-non-taxable)
+  - [Tax Conditions and the `taxable` Flag](#tax-conditions-and-the-taxable-flag)
 - [Documentation](#documentation)
 - [Testing](#testing)
 - [Troubleshooting](#troubleshooting)
@@ -262,6 +263,67 @@ Cart::addItem([
 // Update existing item to be non-taxable
 Cart::updateItem('item_id', ['taxable' => false]);
 ```
+
+### Tax Conditions and the `taxable` Flag
+
+Use `PercentageTaxCondition` or `FixedTaxCondition` to apply tax. Tax is calculated on a **tax base** composed of:
+
+1. The subtotal of items whose `taxable` attribute is `true`, plus
+2. Any conditions (cart-level or item-level) whose `taxable` flag is `true`.
+
+Conditions default to `taxable: false`, which means **they do not affect the tax base**. Set `taxable: true` on a condition when its amount should be taxed (e.g. a taxable shipping fee) or when a discount should reduce the tax base.
+
+```php
+use Daikazu\Flexicart\Conditions\Types\FixedCondition;
+use Daikazu\Flexicart\Conditions\Types\PercentageCondition;
+use Daikazu\Flexicart\Conditions\Types\PercentageTaxCondition;
+
+// Non-taxable shipping — added to total, NOT added to the tax base.
+$shipping = new FixedCondition(
+    name: 'Shipping',
+    value: 10.00,
+    taxable: false // default
+);
+
+// Taxable shipping — added to total AND added to the tax base.
+$taxableShipping = new FixedCondition(
+    name: 'Shipping',
+    value: 10.00,
+    taxable: true
+);
+
+// Discount that does NOT reduce the tax base (tax is calculated on the pre-discount amount).
+$discount = new PercentageCondition(
+    name: 'Discount',
+    value: -10,
+    taxable: false // default
+);
+
+// Discount that DOES reduce the tax base by its full amount (tax is calculated on the post-discount amount).
+$discountReducingTax = new PercentageCondition(
+    name: 'Discount',
+    value: -10,
+    taxable: true
+);
+
+// Apply sales tax. The tax is computed against the tax base described above.
+$tax = new PercentageTaxCondition(name: 'Sales Tax', value: 8.25);
+
+Cart::addCondition($shipping);
+Cart::addCondition($discount);
+Cart::addCondition($tax);
+```
+
+#### Summary
+
+| Condition                           | Effect on total | Effect on tax base       |
+|-------------------------------------|-----------------|--------------------------|
+| Fee with `taxable: false` (default) | Adds to total   | No change                |
+| Fee with `taxable: true`            | Adds to total   | Adds full fee amount     |
+| Discount with `taxable: false`      | Reduces total   | No change                |
+| Discount with `taxable: true`       | Reduces total   | Reduces by full amount   |
+
+The same rule applies to item-level conditions: an item condition with `taxable: false` is included in the item's subtotal but excluded from the tax base.
 
 ## Documentation
 
