@@ -66,7 +66,7 @@ final class ItemQuantityRule extends AbstractRule
                 $matchingSubtotal = $matchingSubtotal->plus($item->subtotal());
             }
 
-            $discountAmount = $matchingSubtotal->multiplyBy(abs($this->value) / 100, RoundingMode::HALF_UP);
+            $discountAmount = $matchingSubtotal->multiplyBy(abs($this->value) / 100, RoundingMode::HalfUp);
 
             return new Price(-$discountAmount->toFloat());
         }
@@ -76,7 +76,7 @@ final class ItemQuantityRule extends AbstractRule
             // Discount per qualifying item
             $quantity = $this->getMatchingItemsQuantity();
             $perItemDiscount = new Price($this->value);
-            $totalDiscount = $perItemDiscount->multiplyBy($quantity, RoundingMode::HALF_UP);
+            $totalDiscount = $perItemDiscount->multiplyBy($quantity, RoundingMode::HalfUp);
 
             return $totalDiscount;
         }

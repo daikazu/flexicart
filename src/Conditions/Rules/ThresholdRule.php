@@ -50,7 +50,7 @@ final class ThresholdRule extends AbstractRule
     {
         if ($this->discountType === ConditionType::PERCENTAGE) {
             // For percentage, calculate based on subtotal
-            $discountAmount = $this->subtotal->multiplyBy(abs($this->value) / 100, RoundingMode::HALF_UP);
+            $discountAmount = $this->subtotal->multiplyBy(abs($this->value) / 100, RoundingMode::HalfUp);
 
             // Return negative for discount
             return new Price(-$discountAmount->toFloat());

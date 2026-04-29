@@ -155,7 +155,7 @@ final class Price implements Stringable
     public function multiplyBy(int | float $factor, ?RoundingMode $roundingMode = null): self
     {
         // Use HALF_UP as the default rounding mode if none is specified
-        $mode = $roundingMode ?? RoundingMode::HALF_UP;
+        $mode = $roundingMode ?? RoundingMode::HalfUp;
 
         return new self($this->money->multipliedBy($factor, $mode));
     }

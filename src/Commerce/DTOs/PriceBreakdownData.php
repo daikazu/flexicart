@@ -27,15 +27,32 @@ final readonly class PriceBreakdownData
     /** @param  array<string, mixed>  $data */
     public static function fromArray(array $data): self
     {
+        $variantRaw = $data['variant'] ?? null;
+        /** @var array{id: int, sku: string, name: string}|null $variant */
+        $variant = is_array($variantRaw) ? $variantRaw : null;
+
+        $tierAppliedRaw = $data['tier_applied'] ?? null;
+        /** @var array{min_qty: int, max_qty: int|null}|null $tierApplied */
+        $tierApplied = is_array($tierAppliedRaw) ? $tierAppliedRaw : null;
+
+        /** @var array<int, array<string, mixed>> $addons */
+        $addons = is_array($data['addons'] ?? null) ? $data['addons'] : [];
+
+        $productSlugRaw = $data['product_slug'] ?? '';
+        $quantityRaw = $data['quantity'] ?? 0;
+        $currencyRaw = $data['currency'] ?? '';
+        $unitPriceRaw = $data['unit_price'] ?? '';
+        $lineTotalRaw = $data['line_total'] ?? '';
+
         return new self(
-            productSlug: $data['product_slug'],
-            variant: $data['variant'],
-            quantity: $data['quantity'],
-            currency: $data['currency'],
-            unitPrice: $data['unit_price'],
-            tierApplied: $data['tier_applied'],
-            addons: $data['addons'],
-            lineTotal: $data['line_total'],
+            productSlug: is_string($productSlugRaw) ? $productSlugRaw : '',
+            variant: $variant,
+            quantity: is_int($quantityRaw) ? $quantityRaw : (is_numeric($quantityRaw) ? (int) $quantityRaw : 0),
+            currency: is_string($currencyRaw) ? $currencyRaw : '',
+            unitPrice: is_string($unitPriceRaw) ? $unitPriceRaw : '',
+            tierApplied: $tierApplied,
+            addons: $addons,
+            lineTotal: is_string($lineTotalRaw) ? $lineTotalRaw : '',
             raw: $data,
         );
     }

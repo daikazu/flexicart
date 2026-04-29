@@ -49,6 +49,7 @@ final class CommerceClient implements CommerceClientInterface
      * List active products (paginated).
      *
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, ProductData>
      *
      * @throws CommerceConnectionException
      * @throws CommerceAuthenticationException
@@ -57,6 +58,7 @@ final class CommerceClient implements CommerceClientInterface
     {
         $response = $this->get('/products', $filters);
 
+        /** @var LengthAwarePaginator<int, ProductData> */
         return $this->toPaginator($response, fn (array $item) => ProductData::fromArray($item));
     }
 
@@ -70,13 +72,17 @@ final class CommerceClient implements CommerceClientInterface
     {
         $response = $this->get("/products/{$slug}");
 
-        return ProductData::fromArray($response['data']);
+        /** @var array<string, mixed> $data */
+        $data = $response['data'];
+
+        return ProductData::fromArray($data);
     }
 
     /**
      * List active collections (paginated).
      *
      * @param  array<string, mixed>  $filters
+     * @return LengthAwarePaginator<int, CollectionData>
      *
      * @throws CommerceConnectionException
      * @throws CommerceAuthenticationException
@@ -85,6 +91,7 @@ final class CommerceClient implements CommerceClientInterface
     {
         $response = $this->get('/collections', $filters);
 
+        /** @var LengthAwarePaginator<int, CollectionData> */
         return $this->toPaginator($response, fn (array $item) => CollectionData::fromArray($item));
     }
 
@@ -98,7 +105,10 @@ final class CommerceClient implements CommerceClientInterface
     {
         $response = $this->get("/collections/{$slug}");
 
-        return CollectionData::fromArray($response['data']);
+        /** @var array<string, mixed> $data */
+        $data = $response['data'];
+
+        return CollectionData::fromArray($data);
     }
 
     /**
@@ -113,7 +123,10 @@ final class CommerceClient implements CommerceClientInterface
     {
         $response = $this->request('post', "/products/{$slug}/resolve-price", $config);
 
-        return PriceBreakdownData::fromArray($response['data']);
+        /** @var array<string, mixed> $data */
+        $data = $response['data'];
+
+        return PriceBreakdownData::fromArray($data);
     }
 
     /**
@@ -128,7 +141,10 @@ final class CommerceClient implements CommerceClientInterface
     {
         $response = $this->request('post', "/products/{$slug}/cart-item", $config);
 
-        return CartItemData::fromArray($response['data']);
+        /** @var array<string, mixed> $data */
+        $data = $response['data'];
+
+        return CartItemData::fromArray($data);
     }
 
     /**
@@ -191,6 +207,13 @@ final class CommerceClient implements CommerceClientInterface
      * @throws CommerceConnectionException
      * @throws CommerceAuthenticationException
      */
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     *
+     * @throws CommerceConnectionException
+     * @throws CommerceAuthenticationException
+     */
     private function request(string $method, string $path, array $data = []): array
     {
         try {
@@ -200,19 +223,24 @@ final class CommerceClient implements CommerceClientInterface
                 : $this->http->post($path, $data);
 
             if ($response->status() === 401) {
+                $authMsg = $response->json('error.message', 'Authentication failed.');
                 throw new CommerceAuthenticationException(
-                    $response->json('error.message', 'Authentication failed.')
+                    is_string($authMsg) ? $authMsg : 'Authentication failed.'
                 );
             }
 
             if ($response->failed()) {
+                $errMsg = $response->json('error.message', "Request failed with status {$response->status()}.");
                 throw new CommerceConnectionException(
-                    $response->json('error.message', "Request failed with status {$response->status()}."),
+                    is_string($errMsg) ? $errMsg : "Request failed with status {$response->status()}.",
                     $response->status(),
                 );
             }
 
-            return $response->json();
+            /** @var array<string, mixed> $json */
+            $json = $response->json();
+
+            return $json;
         } catch (ConnectionException $e) {
             throw new CommerceConnectionException(
                 "Could not connect to commerce API: {$e->getMessage()}",
@@ -225,12 +253,18 @@ final class CommerceClient implements CommerceClientInterface
     /**
      * Convert a paginated API response into a LengthAwarePaginator.
      *
+     * @template T
      * @param  array<string, mixed>  $response
-     * @param  callable(array<string, mixed>): mixed  $mapper
+     * @param  callable(array<string, mixed>): T  $mapper
+     * @return LengthAwarePaginator<int, T>
      */
     private function toPaginator(array $response, callable $mapper): LengthAwarePaginator
     {
-        $items = array_map($mapper, $response['data']);
+        /** @var list<array<string, mixed>> $dataItems */
+        $dataItems = $response['data'];
+        $items = array_map($mapper, $dataItems);
+
+        /** @var array{total: int, per_page: int, current_page: int} $meta */
         $meta = $response['meta'];
 
         return new LengthAwarePaginator(

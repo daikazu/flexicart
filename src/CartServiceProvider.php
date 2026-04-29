@@ -71,11 +71,11 @@ final class CartServiceProvider extends PackageServiceProvider
         $this->app->singleton('cart', fn (Application $app): CartInterface => $app->make(CartInterface::class));
 
         // Bind commerce driver when enabled
-        if ($this->app['config']['flexicart.commerce.enabled'] ?? false) {
-            /** @var \Illuminate\Config\Repository $config */
-            $config = $this->app['config'];
-
-            $driver = (string) $config->get('flexicart.commerce.driver', 'auto');
+        /** @var \Illuminate\Config\Repository $appConfig */
+        $appConfig = $this->app->make('config');
+        if ($appConfig->get('flexicart.commerce.enabled', false)) {
+            $driverValue = $appConfig->get('flexicart.commerce.driver', 'auto');
+            $driver = is_string($driverValue) ? $driverValue : 'auto';
             $useLocal = $driver === 'local' || ($driver === 'auto' && $this->flexiCommerceInstalled());
 
             $this->app->singleton(CommerceClientInterface::class, function (Application $app) use ($useLocal): CommerceClientInterface {
@@ -87,23 +87,29 @@ final class CartServiceProvider extends PackageServiceProvider
                     }
 
                     /** @var \Illuminate\Config\Repository $config */
-                    $config = $app['config'];
+                    $config = $app->make('config');
+                    $storeIdValue = $config->get('flexicart.commerce.store_id');
 
                     return new \Daikazu\Flexicart\Commerce\LocalCommerceDriver(
-                        storeId: $config->get('flexicart.commerce.store_id'),
+                        storeId: is_string($storeIdValue) ? $storeIdValue : null,
                     );
                 }
 
                 /** @var \Illuminate\Config\Repository $config */
-                $config = $app['config'];
+                $config = $app->make('config');
+                $storeIdValue = $config->get('flexicart.commerce.store_id');
+                $baseUrlValue = $config->get('flexicart.commerce.base_url', '');
+                $tokenValue = $config->get('flexicart.commerce.token', '');
+                $timeoutValue = $config->get('flexicart.commerce.timeout', 10);
+                $cacheTtlValue = $config->get('flexicart.commerce.cache.ttl', 300);
 
                 return new CommerceClient(
-                    baseUrl: (string) $config->get('flexicart.commerce.base_url', ''),
-                    token: (string) $config->get('flexicart.commerce.token', ''),
-                    storeId: $config->get('flexicart.commerce.store_id'),
-                    timeout: (int) $config->get('flexicart.commerce.timeout', 10),
+                    baseUrl: is_string($baseUrlValue) ? $baseUrlValue : '',
+                    token: is_string($tokenValue) ? $tokenValue : '',
+                    storeId: is_string($storeIdValue) ? $storeIdValue : null,
+                    timeout: is_int($timeoutValue) ? $timeoutValue : 10,
                     cacheEnabled: (bool) $config->get('flexicart.commerce.cache.enabled', true),
-                    cacheTtl: (int) $config->get('flexicart.commerce.cache.ttl', 300),
+                    cacheTtl: is_int($cacheTtlValue) ? $cacheTtlValue : 300,
                 );
             });
 

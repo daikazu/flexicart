@@ -30,7 +30,7 @@ final class PercentageTaxCondition extends Condition
             $money = $price
                 ->toRational()
                 ->multipliedBy($multiplier)
-                ->to($price->getContext(), RoundingMode::HALF_UP);
+                ->to($price->getContext(), RoundingMode::HalfUp);
 
             return new Price($money);
         } catch (MathException $e) {

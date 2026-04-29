@@ -56,7 +56,7 @@ final class TieredRule extends AbstractRule
         }
 
         $discountPercent = abs($tier['discount']);
-        $discountAmount = $this->subtotal->multiplyBy($discountPercent / 100, RoundingMode::HALF_UP);
+        $discountAmount = $this->subtotal->multiplyBy($discountPercent / 100, RoundingMode::HalfUp);
 
         // Return negative for discount
         return new Price(-$discountAmount->toFloat());

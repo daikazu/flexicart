@@ -27,13 +27,34 @@ parameters:
         - '#Cannot access property \$value on [a-zA-Z\\\\]+#'
 
         # Allow method calls on mixed types in collections
-        - '#Cannot call method [a-zA-Z_]+ on mixed#'
+        - '#Cannot call method [a-zA-Z_][a-zA-Z0-9_]*\(\) on mixed#'
 
         # Specific to your sortBy closures
         - '#Parameter \#1 \$callback of method Illuminate\\Support\\Collection::sortBy\(\) expects#'
 
         # Allow property access in closure contexts
         - '#Closure should return#'
+
+        # LocalCommerceDriver: object properties on dynamic Eloquent model relations
+        # (flexi-commerce package is optional and not installed in this context)
+        - '#Access to an undefined property object::\$[a-zA-Z_]+#'
+        - '#Call to an undefined method object::[a-zA-Z0-9_]+\(\)#'
+
+        # LocalCommerceDriver: method_exists() check on stub class always evaluates to true
+        - '#Call to function method_exists\(\) with Daikazu\\FlexiCommerce\\#'
+
+        # LocalCommerceDriver: template type resolution in closures over object collections
+        - '#Unable to resolve the template type TMapValue in call to method Illuminate\\Support\\Collection#'
+        - '#contains unresolvable type#'
+
+        # LocalCommerceDriver: closure parameter type for Eloquent Builder with() callbacks
+        - '#Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Builder#'
+
+        # LocalCommerceDriver: mixed given to helper methods from Eloquent magic __get on optional package
+        - '#Parameter \#1 \$[a-z]+ of method Daikazu\\Flexicart\\Commerce\\LocalCommerceDriver::[a-zA-Z]+\(\) expects object, mixed given#'
+
+        # LocalCommerceDriver: passing Eloquent model as specific model type when accessed via magic
+        - '#Parameter \#1 \$[a-z]+ of method Daikazu\\Flexicart\\Commerce\\LocalCommerceDriver::[a-zA-Z]+\(\) expects Daikazu\\FlexiCommerce\\Models\\[a-zA-Z]+, object given#'
 
         # Allow accessing properties on ConditionInterface implementations
         - '#Access to an undefined property Daikazu\\Flexicart\\Conditions\\Contracts\\ConditionInterface::\$target#'
@@ -49,3 +70,7 @@ parameters:
     # Bootstrap file for Laravel helpers
     bootstrapFiles:
         - vendor/autoload.php
+
+    # Scan stubs for optional dependencies (flexi-commerce package)
+    scanDirectories:
+        - stubs

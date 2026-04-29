@@ -162,7 +162,8 @@ final class Cart implements CartInterface
      */
     public function addItem(array | CartItem $item, ?AddItemBehavior $behavior = null): self
     {
-        $behavior ??= AddItemBehavior::tryFrom((string) config('flexicart.add_item_behavior', 'update'))
+        $addItemBehaviorConfig = config('flexicart.add_item_behavior', 'update');
+        $behavior ??= AddItemBehavior::tryFrom(is_string($addItemBehaviorConfig) ? $addItemBehaviorConfig : 'update')
             ?? AddItemBehavior::Update;
 
         if ($item instanceof CartItem) {
