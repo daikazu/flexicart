@@ -15,6 +15,8 @@
 [![GitHub forks](https://img.shields.io/github/forks/daikazu/flexicart?style=flat-square)](https://github.com/daikazu/flexicart/network)
 [![GitHub stars](https://img.shields.io/github/stars/daikazu/flexicart?style=flat-square)](https://github.com/daikazu/flexicart/stargazers)
 
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/mikewallcodes)
+
 A flexible shopping cart package for Laravel with support for session or database storage, conditional pricing, cart merging, rules engine, and custom product attributes.
 
 ## Table of Contents
