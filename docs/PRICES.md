@@ -18,7 +18,8 @@ $price = Price::from(29.99);
 $price = Price::from(29.99, 'EUR');
 
 // Create from Money object
-$money = \Brick\Money\Money::of(29.99, 'USD');
+// Pass the amount as a string: brick/money 0.12+ no longer accepts floats
+$money = \Brick\Money\Money::of('29.99', 'USD');
 $price = new Price($money);
 
 // Create zero price

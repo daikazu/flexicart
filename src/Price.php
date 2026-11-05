@@ -48,7 +48,7 @@ final class Price implements Stringable
         $this->locale = is_string($localeConfig) ? $localeConfig : 'en_US';
 
         try {
-            $this->money = $value instanceof Money ? $value : Money::of($value, $this->currency);
+            $this->money = $value instanceof Money ? $value : Money::of(self::number($value), $this->currency);
         } catch (NumberFormatException | RoundingNecessaryException | UnknownCurrencyException $e) {
 
             throw new PriceException($e->getMessage());
@@ -105,7 +105,7 @@ final class Price implements Stringable
     {
         $addMoney = $price instanceof self
             ? $price->money
-            : Money::of($price, $this->currency);
+            : Money::of(self::number($price), $this->currency);
 
         return new self($this->money->plus($addMoney));
 
@@ -122,7 +122,7 @@ final class Price implements Stringable
         try {
             $subMoney = $price instanceof self
                 ? $price->money
-                : Money::of($price, $this->currency);
+                : Money::of(self::number($price), $this->currency);
         } catch (NumberFormatException | RoundingNecessaryException | UnknownCurrencyException $e) {
 
             throw new PriceException($e->getMessage());
@@ -157,7 +157,7 @@ final class Price implements Stringable
         // Use HALF_UP as the default rounding mode if none is specified
         $mode = $roundingMode ?? RoundingMode::HalfUp;
 
-        return new self($this->money->multipliedBy($factor, $mode));
+        return new self($this->money->multipliedBy(self::number($factor), $mode));
     }
 
     /**
@@ -173,7 +173,7 @@ final class Price implements Stringable
             throw new InvalidArgumentException('Cannot divide by zero');
         }
 
-        return new self($this->money->dividedBy($divisor));
+        return new self($this->money->dividedBy(self::number($divisor)));
     }
 
     /**
@@ -184,7 +184,7 @@ final class Price implements Stringable
      */
     public function percentage(float $percentage): self
     {
-        $amount = $this->money->toRational()->multipliedBy($percentage / 100);
+        $amount = $this->money->toRational()->multipliedBy(self::number($percentage / 100));
 
         return new self($this->money->plus($amount));
     }
@@ -229,5 +229,16 @@ final class Price implements Stringable
     public function __toString(): string
     {
         return $this->formatted();
+    }
+
+    /**
+     * Prepare a number for brick/money, which stopped accepting floats in 0.12.
+     *
+     * The string cast is the same conversion older versions applied internally,
+     * so results are identical across the supported range.
+     */
+    private static function number(int | float | string $value): int | string
+    {
+        return is_float($value) ? (string) $value : $value;
     }
 }

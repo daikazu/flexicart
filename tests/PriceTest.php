@@ -34,7 +34,7 @@ describe('Price', function (): void {
         });
 
         test('can be instantiated with Money object', function (): void {
-            $money = Money::of(75.50, 'USD');
+            $money = Money::of('75.50', 'USD');
             $price = new Price($money);
             expect($price)->toBeInstanceOf(Price::class)
                 ->and($price->formatted())->toBe('$75.50');

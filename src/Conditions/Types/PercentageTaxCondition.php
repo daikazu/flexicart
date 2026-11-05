@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Daikazu\Flexicart\Conditions\Types;
 
 use Brick\Math\Exception\MathException;
-use Brick\Math\RoundingMode;
 use Daikazu\Flexicart\Conditions\Condition;
 use Daikazu\Flexicart\Enums\ConditionTarget;
 use Daikazu\Flexicart\Enums\ConditionType;
@@ -25,14 +24,8 @@ final class PercentageTaxCondition extends Condition
         }
 
         try {
-            $multiplier = $this->value / 100;
-
-            $money = $price
-                ->toRational()
-                ->multipliedBy($multiplier)
-                ->to($price->getContext(), RoundingMode::HalfUp);
-
-            return new Price($money);
+            // Rounds half up to the price's own context.
+            return $price->multiplyBy($this->value / 100);
         } catch (MathException $e) {
             throw new PriceException($e->getMessage());
         }
