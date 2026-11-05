@@ -2,6 +2,28 @@
 
 All notable changes to `flexicart` will be documented in this file.
 
+## v1.3.0 - 2026-11-05
+
+### Dependencies
+
+- Added support for `brick/money` 0.12 through 0.15 (constraint is now `>=0.11 <1.0`). Laravel 13 projects resolve the newer versions, which no longer accept floats and removed `AbstractMoney::to()`. FlexiCart now casts floats to strings internally, so `Price::from(29.99)`, `multiplyBy(1.5)` and friends behave exactly as before on every supported version.
+- `brick/math` is now a direct requirement (`>=0.14.2 <2.0`). The package uses `RoundingMode::HalfUp`, which older `brick/math` releases do not have.
+
+### Testing
+
+- Laravel 13 (Testbench 11) is now part of the CI matrix alongside Laravel 12, on both lowest and latest dependencies.
+
+### Docs
+
+- Explained the `taxable` flag on conditions (#3).
+- The Prices guide now passes a string to `Money::of()`.
+
+### Upgrade Note
+
+Nothing changes if you only use FlexiCart's own API. If your code calls `brick/money` directly and you end up on 0.12 or newer, pass amounts as strings (`Money::of('29.99', 'USD')`, not `Money::of(29.99, 'USD')`) and use `toContext()` in place of `to()`.
+
+**Full Changelog**: https://github.com/daikazu/flexicart/compare/v1.2.1...v1.3.0
+
 ## v1.2.1 - 2026-04-21
 
 ### Bug Fixes
